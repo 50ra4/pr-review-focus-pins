@@ -85,3 +85,32 @@ test('manifest exposes only the required surfaces and permission', async () => {
   expect(manifest).not.toHaveProperty('options_ui');
   expect(JSON.stringify(manifest)).not.toContain('http://');
 });
+
+test('panel remains visible in a narrow dark viewport', async ({
+  extensionPage,
+}) => {
+  await extensionPage.setViewportSize({ width: 375, height: 667 });
+  await extensionPage.emulateMedia({
+    colorScheme: 'dark',
+    reducedMotion: 'reduce',
+  });
+
+  const panel = extensionPage.getByRole('region', {
+    name: 'PR Review Focus Pins',
+  });
+  await expect(panel).toBeVisible();
+  const layout = await panel.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      background: getComputedStyle(element).backgroundColor,
+      bottom: bounds.bottom,
+      right: bounds.right,
+      width: bounds.width,
+    };
+  });
+
+  expect(layout.width).toBeLessThanOrEqual(343);
+  expect(layout.right).toBeLessThanOrEqual(375);
+  expect(layout.bottom).toBeLessThanOrEqual(667);
+  expect(layout.background).toBe('rgb(13, 17, 23)');
+});

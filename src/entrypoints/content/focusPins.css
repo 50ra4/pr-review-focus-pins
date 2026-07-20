@@ -365,6 +365,14 @@ footer {
   }
 }
 
+:host([data-color-mode='dark']) {
+  --bg: #0d1117;
+  --border: #30363d;
+  --fg: #e6edf3;
+  --muted: #8b949e;
+  --subtle: #161b22;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   button {
     transition:

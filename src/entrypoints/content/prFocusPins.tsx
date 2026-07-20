@@ -293,6 +293,13 @@ const unmount = (): void => {
   mounted = undefined;
 };
 
+const syncColorMode = (): void => {
+  if (mounted) {
+    mounted.host.dataset.colorMode =
+      document.documentElement.dataset.colorMode ?? 'auto';
+  }
+};
+
 const reconcile = (): void => {
   const scope = parsePrFilesUrl(location.href);
   if (!scope) {
@@ -305,6 +312,7 @@ const reconcile = (): void => {
 
   const host = document.createElement('div');
   host.id = HOST_ID;
+  host.dataset.colorMode = document.documentElement.dataset.colorMode ?? 'auto';
   host.style.cssText =
     'position:fixed;right:16px;bottom:16px;z-index:1000;display:block;';
   const shadow = host.attachShadow({ mode: 'open' });
@@ -329,6 +337,7 @@ const start = (): void => {
   window.addEventListener('popstate', reconcile);
   window.addEventListener('pageshow', reconcile);
   window.addEventListener(NAVIGATION_EVENT, reconcile);
+  document.addEventListener('color-mode-change', syncColorMode);
   for (const eventName of GITHUB_NAVIGATION_EVENTS) {
     document.addEventListener(eventName, reconcile);
   }

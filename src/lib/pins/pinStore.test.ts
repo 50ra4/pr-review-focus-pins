@@ -144,6 +144,47 @@ describe('pin store mutations', () => {
     expect(clearAllPins(pinned)).toEqual(emptyStore());
   });
 
+  it('keeps the same file path isolated between pull requests', () => {
+    const otherScope = { ...scope, pullNumber: 43 };
+    const first = upsertPin(
+      sync(emptyStore()),
+      {
+        scope,
+        path: 'src/shared.ts',
+        reason: 'question',
+        note: 'PR 42',
+        currentFingerprint: 'fp-42',
+      },
+      now,
+    );
+    const second = upsertPin(
+      syncPinScope(
+        first,
+        {
+          scope: otherScope,
+          currentFingerprint: 'fp-43',
+          currentPaths: ['src/shared.ts'],
+        },
+        now,
+      ),
+      {
+        scope: otherScope,
+        path: 'src/shared.ts',
+        reason: 'risk',
+        note: 'PR 43',
+        currentFingerprint: 'fp-43',
+      },
+      now,
+    );
+
+    expect(second.scopes['openai/codex#42'].pins['src/shared.ts'].note).toBe(
+      'PR 42',
+    );
+    expect(second.scopes['openai/codex#43'].pins['src/shared.ts'].note).toBe(
+      'PR 43',
+    );
+  });
+
   it('enforces the per-scope pin limit without evicting data', () => {
     let store = sync(emptyStore(), []);
     for (let index = 0; index < PIN_LIMITS.pinsPerScope; index += 1) {
@@ -201,5 +242,55 @@ describe('pin store mutations', () => {
         now,
       ),
     ).toThrow(/100/u);
+  });
+
+  it('enforces the 500-pin total limit without evicting another scope', () => {
+    let store = emptyStore();
+    for (let scopeIndex = 1; scopeIndex <= 3; scopeIndex += 1) {
+      const currentScope = { ...scope, pullNumber: scopeIndex };
+      store = syncPinScope(
+        store,
+        {
+          scope: currentScope,
+          currentFingerprint: `fp-${scopeIndex}`,
+          currentPaths: [],
+        },
+        now,
+      );
+      const pinsToAdd = scopeIndex < 3 ? 200 : 100;
+      for (let pinIndex = 0; pinIndex < pinsToAdd; pinIndex += 1) {
+        store = upsertPin(
+          store,
+          {
+            scope: currentScope,
+            path: `scope-${scopeIndex}/${pinIndex}.ts`,
+            reason: 'revisit',
+            note: '',
+            currentFingerprint: `fp-${scopeIndex}`,
+          },
+          now,
+        );
+      }
+    }
+
+    expect(() =>
+      upsertPin(
+        store,
+        {
+          scope: { ...scope, pullNumber: 3 },
+          path: 'scope-3/overflow.ts',
+          reason: 'risk',
+          note: '',
+          currentFingerprint: 'fp-3',
+        },
+        now,
+      ),
+    ).toThrow(/500/u);
+    expect(
+      Object.values(store.scopes).reduce(
+        (count, state) => count + Object.keys(state.pins).length,
+        0,
+      ),
+    ).toBe(500);
   });
 });
