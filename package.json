@@ -1,0 +1,76 @@
+{
+  "name": "crx-vite-ts-react-template",
+  "version": "1.0.0",
+  "description": "Chrome extension (MV3) template with Vite, TypeScript, React & CRXJS — all four surfaces (popup, options, background, content script) wired via typed messaging & storage, plus a build/verify/release pipeline.",
+  "keywords": [
+    "chrome-extension",
+    "manifest-v3",
+    "vite",
+    "typescript",
+    "react",
+    "crxjs",
+    "template",
+    "boilerplate",
+    "typed-messaging",
+    "typed-storage"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "prepare": "husky",
+    "dev": "vite",
+    "build": "rm -rf extension && vite build",
+    "verify": "npm run check-type && npm run lint && npm run test && npm run build && npm run verify:manifest",
+    "verify:full": "npm run verify && npm run e2e",
+    "verify:manifest": "node scripts/verify-manifest.mjs",
+    "verify:release-version": "node scripts/verify-release-version.mjs",
+    "e2e": "playwright test",
+    "preview": "vite preview",
+    "package": "npm run build && npm run verify:manifest && node scripts/package-extension.mjs",
+    "zip": "npm run package",
+    "lint": "oxlint src scripts e2e *.config.ts",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.ts\"",
+    "check-type": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "lint-staged": {
+    "*.{mjs,ts,tsx}": ["oxlint --fix", "prettier --write"]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/50ra4/crx-vite-ts-react-template.git"
+  },
+  "author": "50ra4",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/50ra4/crx-vite-ts-react-template/issues"
+  },
+  "homepage": "https://github.com/50ra4/crx-vite-ts-react-template#readme",
+  "dependencies": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "2.7.1",
+    "@playwright/test": "1.61.1",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@types/chrome": "0.2.2",
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "fflate": "0.8.3",
+    "husky": "9.1.7",
+    "jsdom": "29.1.1",
+    "lint-staged": "17.0.8",
+    "oxlint": "1.74.0",
+    "prettier": "3.9.5",
+    "typescript": "7.0.2",
+    "vite": "8.1.5",
+    "vitest": "4.1.10"
+  }
+}
