@@ -17,17 +17,12 @@ export default defineManifest(({ command }) => ({
   ...manifestVersion,
   manifest_version: 3,
   name: EXTENSION_NAMES[command],
-  description: '',
+  description:
+    'Private, local focus pins for reviewing large GitHub pull requests.',
   icons: {
     '16': `public/logo/icon16${createIconFileSuffix(command)}.png`,
     '48': `public/logo/icon48${createIconFileSuffix(command)}.png`,
     '128': `public/logo/icon128${createIconFileSuffix(command)}.png`,
-  },
-  action: {
-    default_popup: 'popup.html',
-  },
-  options_ui: {
-    page: 'options.html',
   },
   ...(command === 'build'
     ? {
@@ -41,8 +36,9 @@ export default defineManifest(({ command }) => ({
   permissions: ['storage'],
   content_scripts: [
     {
-      matches: ['https://example.com/*'],
-      js: ['src/entrypoints/content/sample.tsx'],
+      matches: ['https://github.com/*'],
+      js: ['src/entrypoints/content/prFocusPins.tsx'],
+      run_at: 'document_idle',
     },
   ],
   background: {

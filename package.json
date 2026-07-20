@@ -1,7 +1,7 @@
 {
-  "name": "crx-vite-ts-react-template",
-  "version": "1.0.0",
-  "description": "Chrome extension (MV3) template with Vite, TypeScript, React & CRXJS — all four surfaces (popup, options, background, content script) wired via typed messaging & storage, plus a build/verify/release pipeline.",
+  "name": "pr-review-focus-pins",
+  "version": "0.1.0",
+  "description": "Private, local focus pins for reviewing large GitHub pull requests.",
   "keywords": [
     "chrome-extension",
     "manifest-v3",
@@ -9,10 +9,9 @@
     "typescript",
     "react",
     "crxjs",
-    "template",
-    "boilerplate",
-    "typed-messaging",
-    "typed-storage"
+    "github",
+    "pull-request",
+    "code-review"
   ],
   "main": "index.js",
   "scripts": {
@@ -33,11 +32,14 @@
     "test": "vitest run"
   },
   "lint-staged": {
-    "*.{mjs,ts,tsx}": ["oxlint --fix", "prettier --write"]
+    "*.{mjs,ts,tsx}": [
+      "oxlint --fix",
+      "prettier --write"
+    ]
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/50ra4/crx-vite-ts-react-template.git"
+    "url": "git+https://github.com/50ra4/pr-review-focus-pins.git"
   },
   "author": "50ra4",
   "license": "MIT",
@@ -45,9 +47,9 @@
     "node": ">=24.0.0"
   },
   "bugs": {
-    "url": "https://github.com/50ra4/crx-vite-ts-react-template/issues"
+    "url": "https://github.com/50ra4/pr-review-focus-pins/issues"
   },
-  "homepage": "https://github.com/50ra4/crx-vite-ts-react-template#readme",
+  "homepage": "https://github.com/50ra4/pr-review-focus-pins#readme",
   "dependencies": {
     "react": "19.2.7",
     "react-dom": "19.2.7"
