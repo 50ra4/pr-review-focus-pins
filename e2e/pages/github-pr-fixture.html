@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fixture PR Files</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 24px;
+      }
+      aside {
+        width: 360px;
+      }
+      li {
+        align-items: center;
+        display: flex;
+        min-height: 36px;
+      }
+      a {
+        color: #0969da;
+      }
+      [id^='diff-'] {
+        border-top: 1px solid #d0d7de;
+        min-height: 120px;
+        padding: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Files changed</h1>
+    <aside aria-label="File tree">
+      <ul data-file-tree>
+        <li data-file-tree-item="readme">
+          <a title="README.md" href="/acme/widgets/pull/77/files#diff-readme"
+            >README.md</a
+          >
+        </li>
+        <li data-file-tree-item="security">
+          <a
+            title="src/security.ts"
+            href="/acme/widgets/pull/77/files#diff-security"
+            >security.ts</a
+          >
+        </li>
+        <li data-file-tree-item="test">
+          <a
+            title="src/security.test.ts"
+            href="/acme/widgets/pull/77/files#diff-security-test"
+            >security.test.ts</a
+          >
+        </li>
+      </ul>
+    </aside>
+    <main>
+      <div id="diff-readme">README.md diff</div>
+      <div id="diff-security">src/security.ts diff</div>
+      <div id="diff-security-test">src/security.test.ts diff</div>
+    </main>
+  </body>
+</html>

@@ -5,28 +5,36 @@ import { sendMessage } from './messages';
 // これらの関数は実行されない(型検査のみ)。
 
 const _requestTypeChecks = () => {
+  const scope = { owner: 'openai', repository: 'codex', pullNumber: 42 };
+
   // @ts-expect-error 存在しないメッセージ名は拒否される
   void sendMessage('unknown-message', { text: 'x' });
 
-  // @ts-expect-error payload の型が契約と一致しない(text は string)
-  void sendMessage('greet', { text: 123 });
+  void sendMessage('upsertPin', {
+    scope,
+    path: 'src/a.ts',
+    // @ts-expect-error payload の reason が契約と一致しない
+    reason: 'other',
+    note: '',
+    currentFingerprint: 'fingerprint',
+  });
 
   // @ts-expect-error payload のプロパティ不足
-  void sendMessage('greet', {});
+  void sendMessage('upsertPin', { scope });
 
   // 正しい呼び出しは型エラーにならない
-  void sendMessage('greet', { text: 'ok' });
+  void sendMessage('removePin', { scope, path: 'src/a.ts' });
 };
 
 const _responseTypeChecks = async () => {
-  const res = await sendMessage('greet', { text: 'ok' });
+  const res = await sendMessage('clearAllPins', {});
 
-  // response は { reply: string }。存在しないプロパティ参照は型エラー
+  // response は PinStoreV1。存在しないプロパティ参照は型エラー
   // @ts-expect-error
   void res.nonExistent;
 
   // 正しいプロパティ参照は型エラーにならない
-  void res.reply;
+  void res.scopes;
 };
 
 // 未使用シンボル警告を避けるため参照する(呼び出しはしない)
