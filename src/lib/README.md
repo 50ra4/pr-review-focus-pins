@@ -12,6 +12,8 @@ messaging と storage(local / managed / session / sync)を in-memory で再現�
 
 ## messaging(`src/lib/messaging/`)
 
+`panelBridge.ts` defines the validated `postMessage` contract between the GitHub content script and the cross-origin extension panel. The bridge never carries saved reasons or notes.
+
 Extension context間(content ↔ background)の型安全なmessagingレイヤー。
 依存ゼロの自前実装。
 

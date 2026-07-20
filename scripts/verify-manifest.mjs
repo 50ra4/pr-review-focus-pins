@@ -10,6 +10,7 @@ const EXPECTED_PERMISSIONS = ['storage'];
 const EXPECTED_HOST_PERMISSIONS = [];
 const GLOB = /[*?[\]{}]/u;
 const CONCRETE_JS_ASSET = /^assets\/[^*?[\]{}]+\.js$/u;
+const PANEL_PAGE = 'panel.html';
 
 const extensionDirectory = fileURLToPath(
   new URL('../extension/', import.meta.url),
@@ -187,6 +188,7 @@ report(
 const webAccessibleResources = Array.isArray(manifest.web_accessible_resources)
   ? manifest.web_accessible_resources
   : [];
+let panelPageCount = 0;
 webAccessibleResources.forEach((entry, index) => {
   if (!isRecord(entry)) {
     errors.push(`web_accessible_resources.${index} must be an object.`);
@@ -218,12 +220,17 @@ webAccessibleResources.forEach((entry, index) => {
       `${resourceField} must not contain a glob: ${path}`,
     );
     report(
-      CONCRETE_JS_ASSET.test(path),
-      `${resourceField} must expose only a concrete JS asset: ${path}`,
+      CONCRETE_JS_ASSET.test(path) || path === PANEL_PAGE,
+      `${resourceField} must expose only a concrete JS asset or ${PANEL_PAGE}: ${path}`,
     );
+    if (path === PANEL_PAGE) panelPageCount += 1;
     addReference(path, resourceField);
   });
 });
+report(
+  panelPageCount === 1,
+  `${PANEL_PAGE} must be exposed exactly once; received ${panelPageCount}.`,
+);
 
 const verifyReference = async ({ field, value }) => {
   const absolutePath = resolve(extensionDirectory, value);

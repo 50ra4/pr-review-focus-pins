@@ -1,4 +1,4 @@
-import { normalizeFilePath } from '../../../lib/pins/guards';
+import { isRecord, normalizeFilePath } from '../../../lib/pins/guards';
 import type { PrScope } from '../../../lib/pins/types';
 
 const PR_FILES_URL =
@@ -32,6 +32,8 @@ export type SkippedFileTreeItem = {
 export type FileTreeDiagnostics = {
   treeFound: boolean;
   candidateCount: number;
+  complete: boolean;
+  expectedFileCount: number | null;
   skipped: SkippedFileTreeItem[];
 };
 
@@ -52,6 +54,35 @@ const findTreeRoot = (root: ParentNode): Element | null => {
   for (const selector of TREE_SELECTORS) {
     const element = root.querySelector(selector);
     if (element) return element;
+  }
+  return null;
+};
+
+const readFileCount = (element: Element): number | null => {
+  const encoded = element.getAttribute('data-hydro-click-payload');
+  if (!encoded) return null;
+  try {
+    const value: unknown = JSON.parse(encoded);
+    if (!isRecord(value) || !isRecord(value.payload)) return null;
+    const { payload } = value;
+    if (payload.category !== 'file_tree' || !isRecord(payload.data)) {
+      return null;
+    }
+    const count = payload.data.file_count;
+    return typeof count === 'number' && Number.isSafeInteger(count) && count > 0
+      ? count
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const getExpectedFileCount = (tree: Element): number | null => {
+  const ownCount = readFileCount(tree);
+  if (ownCount !== null) return ownCount;
+  for (const element of tree.querySelectorAll('[data-hydro-click-payload]')) {
+    const count = readFileCount(element);
+    if (count !== null) return count;
   }
   return null;
 };
@@ -99,6 +130,8 @@ export const extractFileTreeItems = (
   const diagnostics: FileTreeDiagnostics = {
     treeFound: tree !== null,
     candidateCount: 0,
+    complete: false,
+    expectedFileCount: tree ? getExpectedFileCount(tree) : null,
     skipped: [],
   };
   if (!tree) return { items: [], diagnostics };
@@ -136,6 +169,7 @@ export const extractFileTreeItems = (
     });
   }
 
+  diagnostics.complete = diagnostics.expectedFileCount === items.length;
   return { items, diagnostics };
 };
 

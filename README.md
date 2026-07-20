@@ -8,7 +8,7 @@ PR Review Focus Pins is a Chrome extension for keeping a private review queue in
 
 - Adds one keyboard-accessible focus-pin button to each file in a GitHub pull request's **Files changed** tree.
 - Stores a reason (`revisit`, `question`, `test`, `risk`, or `custom`) and a note of up to 200 Unicode characters.
-- Shows all pins in a single Shadow DOM panel with previous/next navigation, editing, removal, and stale-file status.
+- Shows all pins in a cross-origin extension panel with previous/next navigation, editing, removal, and stale-file status. Reasons and notes are never rendered into GitHub's DOM.
 - Filters only unpinned rows in the file tree. Diff contents and GitHub's Viewed state are never changed.
 - Detects a changed file set with a local SHA-256 fingerprint while retaining existing pins.
 - Keeps each repository/pull-request scope separate and follows GitHub SPA navigation and delayed tree rendering.
@@ -22,6 +22,8 @@ All pin data stays in `chrome.storage.local` on the current Chrome profile. The 
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `storage`                                   | Persist the local pin store.                                                                           |
 | `https://github.com/*` content-script match | Add controls to GitHub's rendered PR file tree. This is a content-script match, not a host permission. |
+
+`panel.html` is exposed only so GitHub can embed the extension-origin panel. Browser same-origin enforcement prevents GitHub page scripts from reading its DOM; only non-secret file-tree state crosses the typed panel bridge.
 
 The extension does not request `host_permissions`, `tabs`, `activeTab`, `scripting`, or `<all_urls>`. See the [privacy policy](docs/privacy-policy.md) and [Chrome Web Store permission explanation](docs/permissions.md).
 

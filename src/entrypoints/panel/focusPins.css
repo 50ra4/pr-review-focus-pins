@@ -1,4 +1,4 @@
-:host {
+:root {
   --accent: #6e40c9;
   --accent-hover: #5930a7;
   --bg: #ffffff;
@@ -14,6 +14,13 @@
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
 }
 
 * {
@@ -44,10 +51,10 @@ summary:focus-visible {
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(31, 35, 40, 0.2);
-  max-height: min(720px, calc(100vh - 32px));
+  max-height: 100vh;
   overflow: auto;
   padding: 16px;
-  width: min(380px, calc(100vw - 32px));
+  width: 100%;
 }
 .panel__header,
 .editor__heading,
@@ -353,7 +360,7 @@ footer {
 }
 
 @media (prefers-color-scheme: dark) {
-  :host {
+  :root {
     --bg: #0d1117;
     --border: #30363d;
     --fg: #e6edf3;
@@ -365,7 +372,7 @@ footer {
   }
 }
 
-:host([data-color-mode='dark']) {
+:root[data-color-mode='dark'] {
   --bg: #0d1117;
   --border: #30363d;
   --fg: #e6edf3;

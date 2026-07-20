@@ -67,6 +67,31 @@ describe('GitHub PR adapter', () => {
     ]);
   });
 
+  it('reports completeness only when the extracted tree matches GitHub file_count', () => {
+    document.body.innerHTML = nestedFixture;
+    const tree = document.querySelector('[data-file-tree]');
+    tree?.setAttribute(
+      'data-hydro-click-payload',
+      JSON.stringify({
+        payload: { category: 'file_tree', data: { file_count: 3 } },
+      }),
+    );
+    const scope = { owner: 'acme', repository: 'widgets', pullNumber: 77 };
+
+    const partial = extractFileTreeItems(document, scope);
+    expect(partial.diagnostics.expectedFileCount).toBe(3);
+    expect(partial.diagnostics.complete).toBe(false);
+
+    tree?.setAttribute(
+      'data-hydro-click-payload',
+      JSON.stringify({
+        payload: { category: 'file_tree', data: { file_count: 2 } },
+      }),
+    );
+    const complete = extractFileTreeItems(document, scope);
+    expect(complete.diagnostics.complete).toBe(true);
+  });
+
   it('injects one button per row idempotently and reinjects after rerender', () => {
     document.body.innerHTML = nestedFixture;
     const scope = { owner: 'acme', repository: 'widgets', pullNumber: 77 };

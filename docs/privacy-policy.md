@@ -21,6 +21,8 @@ The extension does not transmit, sell, share, or remotely collect this data. It 
 
 The content script reads only the rendered file tree on GitHub pull-request **Files changed** pages. It does not collect page contents in the background or send page data anywhere.
 
+Saved reasons and notes are displayed in a `chrome-extension://` iframe rather than GitHub's document. GitHub page scripts cannot read that cross-origin panel. Communication with the host page is limited to file-tree paths, a local revision fingerprint, display state, and navigation commands; saved reasons and notes never cross that boundary.
+
 ## Deletion and retention
 
 Data remains until the user removes a pin, deletes one pull request's data, deletes all pin data from the extension panel, clears extension storage, or uninstalls the extension. No automatic eviction occurs when a limit is reached.

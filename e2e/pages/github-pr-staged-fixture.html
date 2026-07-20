@@ -8,7 +8,10 @@
   <body>
     <h1>Files changed</h1>
     <aside aria-label="File tree">
-      <ul data-file-tree>
+      <ul
+        data-file-tree
+        data-hydro-click-payload='{"payload":{"category":"file_tree","data":{"file_count":2}}}'
+      >
         <li data-file-tree-item="readme">
           <a title="README.md" href="/acme/widgets/pull/78/files#diff-readme"
             >README.md</a
@@ -30,7 +33,7 @@
         diff.id = 'diff-security';
         diff.textContent = 'src/security.ts diff';
         document.querySelector('main')?.append(diff);
-      }, 250);
+      }, 1_500);
     </script>
   </body>
 </html>

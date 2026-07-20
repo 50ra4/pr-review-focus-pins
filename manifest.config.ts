@@ -41,6 +41,13 @@ export default defineManifest(({ command }) => ({
       run_at: 'document_idle',
     },
   ],
+  web_accessible_resources: [
+    {
+      resources: ['panel.html'],
+      matches: ['https://github.com/*'],
+      use_dynamic_url: false,
+    },
+  ],
   background: {
     service_worker: 'src/entrypoints/background/background.ts',
   },

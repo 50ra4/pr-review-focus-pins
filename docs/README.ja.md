@@ -8,7 +8,7 @@ PR Review Focus Pinsは、大規模なGitHub Pull Request内に個人用レビ�
 
 - GitHub Pull Requestの**Files changed**にある各ファイルへ、キーボード操作可能なpinボタンを1つ追加します。
 - `revisit`、`question`、`test`、`risk`、`custom`の理由と、最大200 Unicode文字のメモを保存します。
-- 単一のShadow DOMパネルで、前後移動、編集、解除、stale表示を行います。
+- GitHubとは別originの単一パネルで、前後移動、編集、解除、stale表示を行います。理由とメモはGitHubのDOMへ描画しません。
 - 「pinのみ」はファイルツリーの未pin行だけを隠します。diff本文とGitHubのViewed状態は変えません。
 - ファイル集合のSHA-256 fingerprintを端末内で計算し、PR更新を検知しても既存pinを保持します。
 - repository/PR単位で状態を分離し、GitHubのSPA遷移と遅延描画・再描画へ追従します。
@@ -22,6 +22,8 @@ pinデータは現在のChrome profileの`chrome.storage.local`だけへ保存�
 | ------------------------------------------- | --------------------------------------------------------------------------------- |
 | `storage`                                   | 端末内のpin storeを永続化します。                                                 |
 | `https://github.com/*` content-script match | GitHubが描画したPR file treeへ操作UIを追加します。host permissionではありません。 |
+
+`panel.html`はGitHubからextension-originパネルを埋め込むためだけに公開します。同一オリジン制約によりGitHub側のscriptはパネルDOMを読めず、型付きbridgeを通るのは秘密情報を含まないfile tree状態だけです。
 
 `host_permissions`、`tabs`、`activeTab`、`scripting`、`<all_urls>`は要求しません。詳細は[プライバシーポリシー](privacy-policy.md)と[権限説明](permissions.md)を参照してください。
 
