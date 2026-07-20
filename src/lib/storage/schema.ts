@@ -1,11 +1,13 @@
+import type { PinStoreV1 } from '../pins/types';
+
 type AppStorageValues = {
-  exampleSetting: string;
+  pinStore: PinStoreV1;
 };
 
 export const storageSchema = {
-  exampleSetting: {
-    area: 'sync',
-    defaultValue: '未設定',
+  pinStore: {
+    area: 'local',
+    defaultValue: { version: 1, scopes: {} },
   },
 } as const satisfies {
   [Key in keyof AppStorageValues]: {
