@@ -3,6 +3,10 @@ import { resolve } from 'node:path';
 import { expect, test } from './fixtures';
 
 const fixturePath = resolve(process.cwd(), 'e2e/pages/github-pr-fixture.html');
+const stagedFixturePath = resolve(
+  process.cwd(),
+  'e2e/pages/github-pr-staged-fixture.html',
+);
 const prUrl = 'https://github.com/acme/widgets/pull/77/files';
 
 test.beforeEach(async ({ extensionPage }) => {
@@ -84,6 +88,40 @@ test('manifest exposes only the required surfaces and permission', async () => {
   expect(manifest).not.toHaveProperty('action');
   expect(manifest).not.toHaveProperty('options_ui');
   expect(JSON.stringify(manifest)).not.toContain('http://');
+});
+
+test('waits for staged file-tree rendering before recording the revision', async ({
+  extensionPage,
+}) => {
+  const html = await readFile(stagedFixturePath, 'utf8');
+  await extensionPage.unroute('https://github.com/**');
+  await extensionPage.route('https://github.com/**', (route) =>
+    route.fulfill({ body: html, contentType: 'text/html' }),
+  );
+  await extensionPage.goto('https://github.com/acme/widgets/pull/78/files');
+
+  await expect(extensionPage.locator('[data-pr-focus-pin-path]')).toHaveCount(
+    2,
+  );
+  await extensionPage.waitForTimeout(1_500);
+  await expect(
+    extensionPage.getByText('PR changed since last review'),
+  ).toHaveCount(0);
+
+  await extensionPage.evaluate(() => {
+    const tree = document.querySelector('[data-file-tree]');
+    const row = document.createElement('li');
+    row.dataset.fileTreeItem = 'new';
+    row.innerHTML =
+      '<a title="src/new.ts" href="/acme/widgets/pull/78/files#diff-new">new.ts</a>';
+    tree?.append(row);
+    const diff = document.createElement('div');
+    diff.id = 'diff-new';
+    document.querySelector('main')?.append(diff);
+  });
+  await expect(
+    extensionPage.getByText('PR changed since last review'),
+  ).toBeVisible();
 });
 
 test('panel remains visible in a narrow dark viewport', async ({

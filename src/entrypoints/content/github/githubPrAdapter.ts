@@ -179,8 +179,10 @@ const updateButton = (
   const tooltip = button.querySelector<HTMLElement>(
     '.pr-focus-pins__row-tooltip',
   );
-  if (tooltip)
-    tooltip.textContent = isPinned ? 'Edit focus pin' : 'Add focus pin';
+  const tooltipText = isPinned ? 'Edit focus pin' : 'Add focus pin';
+  if (tooltip && tooltip.textContent !== tooltipText) {
+    tooltip.textContent = tooltipText;
+  }
 };
 
 export const injectPinButtons = (

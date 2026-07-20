@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Staged Fixture PR Files</title>
+  </head>
+  <body>
+    <h1>Files changed</h1>
+    <aside aria-label="File tree">
+      <ul data-file-tree>
+        <li data-file-tree-item="readme">
+          <a title="README.md" href="/acme/widgets/pull/78/files#diff-readme"
+            >README.md</a
+          >
+        </li>
+      </ul>
+    </aside>
+    <main><div id="diff-readme">README.md diff</div></main>
+    <script>
+      window.setTimeout(() => {
+        const tree = document.querySelector('[data-file-tree]');
+        const row = document.createElement('li');
+        row.dataset.fileTreeItem = 'security';
+        row.innerHTML =
+          '<a title="src/security.ts" href="/acme/widgets/pull/78/files#diff-security">security.ts</a>';
+        tree?.append(row);
+
+        const diff = document.createElement('div');
+        diff.id = 'diff-security';
+        diff.textContent = 'src/security.ts diff';
+        document.querySelector('main')?.append(diff);
+      }, 250);
+    </script>
+  </body>
+</html>

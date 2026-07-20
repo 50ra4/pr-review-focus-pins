@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import panelStyles from './focusPins.css?inline';
 import rowButtonStyles from './githubRowButtons.css?inline';
 import { FocusPinsPanel } from './FocusPinsPanel';
+import { createStableRevisionScheduler } from './revisionStability';
 import {
   cleanupFileTree,
   extractFileTreeItems,
@@ -90,9 +91,24 @@ const Root = ({ scope }: RootProps) => {
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     let active = true;
+    let scanSequence = 0;
     const expectedScopeKey = createScopeKey(scope);
+    const revisionScheduler = createStableRevisionScheduler(
+      async (candidate) => {
+        if (!active) return;
+        try {
+          await sendMessage('syncPinScope', { scope, ...candidate });
+          if (active) setError('');
+        } catch (cause: unknown) {
+          if (active) {
+            setError(cause instanceof Error ? cause.message : String(cause));
+          }
+        }
+      },
+    );
 
     const scan = async (): Promise<void> => {
+      const sequence = ++scanSequence;
       const extraction = extractFileTreeItems(document, scope);
       if (!active) return;
       setDiagnostics(extraction.diagnostics);
@@ -108,22 +124,17 @@ const Root = ({ scope }: RootProps) => {
         new Set(Object.keys(currentScopeState?.pins ?? {})),
       );
 
-      if (extraction.items.length === 0) return;
-      const nextFingerprint = await createRevisionFingerprint(extraction.items);
-      if (!active) return;
-      setFingerprint(nextFingerprint);
-      try {
-        await sendMessage('syncPinScope', {
-          scope,
-          currentFingerprint: nextFingerprint,
-          currentPaths: extraction.items.map((item) => item.path),
-        });
-        if (active) setError('');
-      } catch (cause: unknown) {
-        if (active) {
-          setError(cause instanceof Error ? cause.message : String(cause));
-        }
+      if (extraction.items.length === 0) {
+        revisionScheduler.cancel();
+        return;
       }
+      const nextFingerprint = await createRevisionFingerprint(extraction.items);
+      if (!active || sequence !== scanSequence) return;
+      setFingerprint(nextFingerprint);
+      revisionScheduler.schedule({
+        currentFingerprint: nextFingerprint,
+        currentPaths: extraction.items.map((item) => item.path),
+      });
     };
 
     const scheduleScan = (): void => {
@@ -132,6 +143,7 @@ const Root = ({ scope }: RootProps) => {
         window.dispatchEvent(new Event(NAVIGATION_EVENT));
         return;
       }
+      revisionScheduler.cancel();
       clearTimeout(timeout);
       timeout = setTimeout(() => void scan(), 100);
     };
@@ -143,6 +155,7 @@ const Root = ({ scope }: RootProps) => {
     return () => {
       active = false;
       clearTimeout(timeout);
+      revisionScheduler.cancel();
       observer.disconnect();
       cleanupFileTree(itemsRef.current);
     };

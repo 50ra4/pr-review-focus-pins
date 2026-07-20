@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fixture50 from './fixtures/pr-files-50.html?raw';
 import nestedFixture from './fixtures/pr-files-nested.html?raw';
 import rerenderedFixture from './fixtures/pr-files-rerendered.html?raw';
@@ -86,6 +86,25 @@ describe('GitHub PR adapter', () => {
     document.body.innerHTML = rerenderedFixture;
     const rerendered = extractFileTreeItems(document, scope);
     expect(injectPinButtons(rerendered.items, new Set())).toBe(3);
+  });
+
+  it('does not mutate rows when injected button state is unchanged', async () => {
+    document.body.innerHTML = nestedFixture;
+    const items = extractFileTreeItems(document, {
+      owner: 'acme',
+      repository: 'widgets',
+      pullNumber: 77,
+    }).items;
+    injectPinButtons(items, new Set(['docs/README.md']));
+    const onMutation = vi.fn();
+    const observer = new MutationObserver(onMutation);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    injectPinButtons(items, new Set(['docs/README.md']));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    observer.disconnect();
+    expect(onMutation).not.toHaveBeenCalled();
   });
 
   it('restores every row after pin-only mode is disabled', () => {
