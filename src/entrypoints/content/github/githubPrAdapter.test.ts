@@ -93,6 +93,20 @@ describe('GitHub PR adapter', () => {
     expect(complete.diagnostics.complete).toBe(true);
   });
 
+  it('reports a file tree without file_count as requiring fallback stabilization', () => {
+    document.body.innerHTML = nestedFixture;
+
+    const result = extractFileTreeItems(document, {
+      owner: 'acme',
+      repository: 'widgets',
+      pullNumber: 77,
+    });
+
+    expect(result.items).toHaveLength(2);
+    expect(result.diagnostics.expectedFileCount).toBeNull();
+    expect(result.diagnostics.complete).toBe(false);
+  });
+
   it('injects one button per row idempotently and reinjects after rerender', () => {
     document.body.innerHTML = nestedFixture;
     const scope = { owner: 'acme', repository: 'widgets', pullNumber: 77 };

@@ -93,7 +93,11 @@ const Root = ({ scope }: { scope: PrScope }) => {
   );
 
   const savePin = async (reason: PinReason, note: string): Promise<void> => {
-    if (!selectedPath || !snapshot.currentFingerprint) return;
+    if (!selectedPath) return;
+    if (!snapshot.currentFingerprint) {
+      setSaveError('The GitHub file tree is still loading. Try again shortly.');
+      return;
+    }
     setIsSaving(true);
     setSaveError('');
     try {

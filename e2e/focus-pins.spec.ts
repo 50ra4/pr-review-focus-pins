@@ -95,7 +95,7 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
     document.querySelector('[data-file-tree-item="security"]')?.remove();
     document.querySelector('#diff-security')?.remove();
   });
-  await expect(panel.getByText('Stale')).toBeVisible();
+  await expect(panel.getByText('Stale', { exact: true })).toBeVisible();
   await panel.getByRole('button', { name: 'Remove src/security.ts' }).click();
   await expect(panel.getByText('Review auth boundary')).toHaveCount(0);
 });
@@ -131,6 +131,13 @@ test('waits for staged file-tree rendering before recording the revision', async
   );
   await extensionPage.waitForTimeout(500);
   await expect(panel.getByText('PR changed since last review')).toHaveCount(0);
+  await extensionPage.locator('[data-pr-focus-pin-path="README.md"]').click();
+  await panel.getByRole('button', { name: 'Save pin' }).click();
+  await expect(
+    extensionPage.locator(
+      '[data-pr-focus-pin-path="README.md"][aria-pressed="true"]',
+    ),
+  ).toHaveCount(1);
 
   await extensionPage.evaluate(() => {
     const tree = document.querySelector('[data-file-tree]');
@@ -150,6 +157,34 @@ test('waits for staged file-tree rendering before recording the revision', async
     document.querySelector('main')?.append(diff);
   });
   await expect(panel.getByText('PR changed since last review')).toBeVisible();
+});
+
+test('saves a pin when GitHub omits file_count metadata', async ({
+  extensionPage,
+}) => {
+  const html = (await readFile(fixturePath, 'utf8')).replace(
+    /\s+data-hydro-click-payload='[^']+'/u,
+    '',
+  );
+  await extensionPage.unroute('https://github.com/**');
+  await extensionPage.route('https://github.com/**', (route) =>
+    route.fulfill({ body: html, contentType: 'text/html' }),
+  );
+  await extensionPage.goto(prUrl);
+
+  const panel = extensionPage.frameLocator(panelSelector);
+  await extensionPage
+    .locator('[data-pr-focus-pin-path="src/security.ts"]')
+    .click();
+  await panel.getByLabel('Note').fill('No analytics metadata');
+  await extensionPage.waitForTimeout(3_000);
+  await panel.getByRole('button', { name: 'Save pin' }).click();
+
+  await expect(
+    extensionPage.locator(
+      '[data-pr-focus-pin-path="src/security.ts"][aria-pressed="true"]',
+    ),
+  ).toHaveCount(1);
 });
 
 test('panel remains visible in a narrow dark viewport', async ({

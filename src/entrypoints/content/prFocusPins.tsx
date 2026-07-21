@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot, type Root as ReactRoot } from 'react-dom/client';
 import rowButtonStyles from './githubRowButtons.css?inline';
+import { createFileTreeStability } from './fileTreeStability';
 import {
   cleanupFileTree,
   extractFileTreeItems,
@@ -95,7 +96,8 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
       uiNotRecognized:
         diagnostics.treeFound &&
         diagnostics.candidateCount > 0 &&
-        (!diagnostics.complete || items.length === 0),
+        ((diagnostics.expectedFileCount !== null && !diagnostics.complete) ||
+          items.length === 0),
     }),
     [colorMode, diagnostics, error, fingerprint, items],
   );
@@ -123,12 +125,25 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
         extraction.items,
         new Set(Object.keys(currentScopeState?.pins ?? {})),
       );
-      if (extraction.items.length === 0 || !extraction.diagnostics.complete) {
+      if (extraction.items.length === 0) {
+        stability.cancel();
         setFingerprint('');
         return;
       }
       const nextFingerprint = await createRevisionFingerprint(extraction.items);
       if (!active || sequence !== scanSequence) return;
+      const hasExpectedCount =
+        extraction.diagnostics.expectedFileCount !== null;
+      if (
+        (hasExpectedCount && !extraction.diagnostics.complete) ||
+        (!hasExpectedCount &&
+          !stability.observe(nextFingerprint, extraction.items.length))
+      ) {
+        if (hasExpectedCount) stability.cancel();
+        setFingerprint('');
+        return;
+      }
+      if (hasExpectedCount) stability.cancel();
       setFingerprint(nextFingerprint);
       try {
         await sendMessage('syncPinScope', {
@@ -155,6 +170,7 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
         void scan();
       }, 100);
     };
+    const stability = createFileTreeStability(scheduleScan);
     const observer = new MutationObserver((mutations) => {
       if (hasFileTreeMutation(mutations, document)) scheduleScan();
     });
@@ -163,6 +179,7 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
     return () => {
       active = false;
       clearTimeout(timeout);
+      stability.cancel();
       observer.disconnect();
       cleanupFileTree(itemsRef.current);
     };
