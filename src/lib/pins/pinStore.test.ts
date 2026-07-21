@@ -110,7 +110,17 @@ describe('pin store mutations', () => {
   });
 
   it('does not report a change after syncing the same fingerprint again', () => {
-    const first = sync(emptyStore());
+    const first = upsertPin(
+      emptyStore(),
+      {
+        scope,
+        path: 'src/a.ts',
+        reason: 'revisit',
+        note: '',
+        currentFingerprint: 'fp-src/a.ts',
+      },
+      now,
+    );
     const second = syncPinScope(
       first,
       {
@@ -124,6 +134,38 @@ describe('pin store mutations', () => {
     expect(
       second.scopes['openai/codex#42'].previousFingerprint,
     ).toBeUndefined();
+  });
+
+  it('does not persist a PR scope until its first pin is created', () => {
+    const synced = sync(emptyStore());
+
+    expect(synced.scopes).toEqual({});
+  });
+
+  it('prunes legacy empty scopes before enforcing the scope limit', () => {
+    const legacyStore = emptyStore();
+    for (let pullNumber = 1; pullNumber <= PIN_LIMITS.scopes; pullNumber += 1) {
+      legacyStore.scopes[`openai/codex#${pullNumber}`] = {
+        scope: { ...scope, pullNumber },
+        observedFingerprint: `fp-${pullNumber}`,
+        lastSeenAt: now,
+        pins: {},
+      };
+    }
+
+    const pinned = upsertPin(
+      legacyStore,
+      {
+        scope: { ...scope, pullNumber: 101 },
+        path: 'src/new.ts',
+        reason: 'risk',
+        note: '',
+        currentFingerprint: 'fp-101',
+      },
+      now,
+    );
+
+    expect(Object.keys(pinned.scopes)).toEqual(['openai/codex#101']);
   });
 
   it('removes pins and supports scope or global clearing', () => {
@@ -220,24 +262,28 @@ describe('pin store mutations', () => {
   it('enforces the 100-scope limit', () => {
     let store = emptyStore();
     for (let pullNumber = 1; pullNumber <= PIN_LIMITS.scopes; pullNumber += 1) {
-      store = syncPinScope(
+      store = upsertPin(
         store,
         {
           scope: { ...scope, pullNumber },
+          path: `src/${pullNumber}.ts`,
+          reason: 'revisit',
+          note: '',
           currentFingerprint: `fp-${pullNumber}`,
-          currentPaths: [],
         },
         now,
       );
     }
 
     expect(() =>
-      syncPinScope(
+      upsertPin(
         store,
         {
           scope: { ...scope, pullNumber: 101 },
+          path: 'src/101.ts',
+          reason: 'risk',
+          note: '',
           currentFingerprint: 'overflow',
-          currentPaths: [],
         },
         now,
       ),

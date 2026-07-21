@@ -18,7 +18,11 @@ export const PIN_LIMITS = {
 
 const cloneStore = (store: PinStoreV1): PinStoreV1 => ({
   version: 1,
-  scopes: { ...store.scopes },
+  scopes: Object.fromEntries(
+    Object.entries(store.scopes).filter(
+      ([, scopeState]) => Object.keys(scopeState.pins).length > 0,
+    ),
+  ),
 });
 
 const totalPins = (store: PinStoreV1): number =>
@@ -61,25 +65,19 @@ export const syncPinScope = (
   }
 
   const key = createScopeKey(request.scope);
-  const existing = store.scopes[key];
   const next = cloneStore(store);
-  const nextScope: PinScopeState = existing
-    ? {
-        ...existing,
-        scope: request.scope,
-        observedFingerprint: request.currentFingerprint,
-        lastSeenAt: now,
-        pins: { ...existing.pins },
-        ...(existing.observedFingerprint !== request.currentFingerprint
-          ? { previousFingerprint: existing.observedFingerprint }
-          : {}),
-      }
-    : {
-        scope: request.scope,
-        observedFingerprint: request.currentFingerprint,
-        lastSeenAt: now,
-        pins: {},
-      };
+  const existing = next.scopes[key];
+  if (!existing) return next;
+  const nextScope: PinScopeState = {
+    ...existing,
+    scope: request.scope,
+    observedFingerprint: request.currentFingerprint,
+    lastSeenAt: now,
+    pins: { ...existing.pins },
+    ...(existing.observedFingerprint !== request.currentFingerprint
+      ? { previousFingerprint: existing.observedFingerprint }
+      : {}),
+  };
 
   next.scopes[key] = nextScope;
   validateLimits(next);
@@ -103,9 +101,9 @@ export const upsertPin = (
   }
 
   const key = createScopeKey(request.scope);
-  const existingScope = store.scopes[key];
-  const existingPin = existingScope?.pins[path];
   const next = cloneStore(store);
+  const existingScope = next.scopes[key];
+  const existingPin = existingScope?.pins[path];
   const pin: FilePin = {
     path,
     reason: request.reason,
