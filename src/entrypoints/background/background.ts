@@ -1,6 +1,7 @@
 import { addMessageListeners } from '../../lib/messaging/messages';
 import { isPinStoreV1 } from '../../lib/pins/guards';
 import {
+  acknowledgePinScope,
   clearAllPins,
   clearPinScope,
   removePin,
@@ -37,6 +38,10 @@ const mutateStore = (
   });
 
 addMessageListeners({
+  acknowledgePinScope: (payload) =>
+    mutateStore((store) =>
+      acknowledgePinScope(store, payload, new Date().toISOString()),
+    ),
   upsertPin: (payload) =>
     mutateStore((store) => upsertPin(store, payload, new Date().toISOString())),
   removePin: (payload) => mutateStore((store) => removePin(store, payload)),

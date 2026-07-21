@@ -5,7 +5,9 @@ import { createFileTreeStability } from './fileTreeStability';
 import {
   cleanupFileTree,
   extractFileTreeItems,
+  extractPrHeadCommit,
   hasFileTreeMutation,
+  hasPrHeadMutation,
   injectPinButtons,
   parsePrFilesUrl,
   setPinOnlyMode,
@@ -130,7 +132,17 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
         setFingerprint('');
         return;
       }
-      const nextFingerprint = await createRevisionFingerprint(extraction.items);
+      const headCommit = extractPrHeadCommit(document, scope);
+      if (!headCommit) {
+        stability.cancel();
+        setFingerprint('');
+        setError('GitHub PR revision could not be identified.');
+        return;
+      }
+      const nextFingerprint = await createRevisionFingerprint(
+        extraction.items,
+        headCommit,
+      );
       if (!active || sequence !== scanSequence) return;
       const hasExpectedCount =
         extraction.diagnostics.expectedFileCount !== null;
@@ -172,9 +184,19 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
     };
     const stability = createFileTreeStability(scheduleScan);
     const observer = new MutationObserver((mutations) => {
-      if (hasFileTreeMutation(mutations, document)) scheduleScan();
+      if (
+        hasFileTreeMutation(mutations, document) ||
+        hasPrHeadMutation(mutations, document)
+      ) {
+        scheduleScan();
+      }
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      attributeFilter: ['data-commit', 'data-head-oid', 'data-url', 'href'],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
     void scan();
     return () => {
       active = false;

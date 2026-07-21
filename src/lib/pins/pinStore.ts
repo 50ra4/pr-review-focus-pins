@@ -1,5 +1,6 @@
 import { countCodePoints, createScopeKey, normalizeFilePath } from './guards';
 import type {
+  AcknowledgePinScopeRequest,
   ClearPinScopeRequest,
   FilePin,
   PinScopeState,
@@ -128,6 +129,24 @@ export const upsertPin = (
 
   next.scopes[key] = nextScope;
   validateLimits(next);
+  return next;
+};
+
+export const acknowledgePinScope = (
+  store: PinStoreV1,
+  request: AcknowledgePinScopeRequest,
+  now: string,
+): PinStoreV1 => {
+  const key = createScopeKey(request.scope);
+  const next = cloneStore(store);
+  const existing = next.scopes[key];
+  if (!existing) return next;
+  if (existing.observedFingerprint !== request.currentFingerprint) {
+    throw new Error('The PR changed again. Review the latest revision first.');
+  }
+
+  const { previousFingerprint: _, ...acknowledged } = existing;
+  next.scopes[key] = { ...acknowledged, lastSeenAt: now };
   return next;
 };
 

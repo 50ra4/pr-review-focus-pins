@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  acknowledgePinScope,
   clearAllPins,
   clearPinScope,
   getStalePins,
@@ -107,6 +108,48 @@ describe('pin store mutations', () => {
     expect(getStalePins(state, ['src/b.ts']).map((pin) => pin.path)).toEqual([
       'src/a.ts',
     ]);
+  });
+
+  it('acknowledges only the currently observed PR revision', () => {
+    const pinned = upsertPin(
+      emptyStore(),
+      {
+        scope,
+        path: 'src/a.ts',
+        reason: 'revisit',
+        note: '',
+        currentFingerprint: 'fingerprint-a',
+      },
+      now,
+    );
+    const changed = syncPinScope(
+      pinned,
+      {
+        scope,
+        currentFingerprint: 'fingerprint-b',
+        currentPaths: ['src/a.ts'],
+      },
+      '2026-07-21T00:00:00.000Z',
+    );
+
+    expect(() =>
+      acknowledgePinScope(
+        changed,
+        { scope, currentFingerprint: 'fingerprint-a' },
+        '2026-07-22T00:00:00.000Z',
+      ),
+    ).toThrow(/changed again/u);
+
+    const acknowledged = acknowledgePinScope(
+      changed,
+      { scope, currentFingerprint: 'fingerprint-b' },
+      '2026-07-22T00:00:00.000Z',
+    );
+    const state = acknowledged.scopes['openai/codex#42'];
+
+    expect(state.previousFingerprint).toBeUndefined();
+    expect(state.observedFingerprint).toBe('fingerprint-b');
+    expect(state.pins['src/a.ts']).toBeDefined();
   });
 
   it('does not report a change after syncing the same fingerprint again', () => {

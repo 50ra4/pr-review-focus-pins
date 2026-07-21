@@ -18,6 +18,7 @@ type FocusPinsPanelProps = {
   isSaving: boolean;
   saveError: string;
   onToggleCollapsed: () => void;
+  onAcknowledgeChanges: () => void;
   onTogglePinOnly: (enabled: boolean) => void;
   onPrevious: () => void;
   onNext: () => void;
@@ -50,6 +51,7 @@ export const FocusPinsPanel = ({
   isSaving,
   saveError,
   onToggleCollapsed,
+  onAcknowledgeChanges,
   onTogglePinOnly,
   onPrevious,
   onNext,
@@ -111,9 +113,16 @@ export const FocusPinsPanel = ({
       </div>
 
       {changed && (
-        <p className="notice" role="status">
-          PR changed since last review
-        </p>
+        <div className="notice" role="status">
+          <span>PR changed since last review</span>
+          <button
+            className="text-button notice__action"
+            onClick={onAcknowledgeChanges}
+            type="button"
+          >
+            Acknowledge changes
+          </button>
+        </div>
       )}
       {uiNotRecognized && (
         <p className="error" role="alert">

@@ -41,6 +41,11 @@ export type RemovePinRequest = {
   path: string;
 };
 
+export type AcknowledgePinScopeRequest = {
+  scope: PrScope;
+  currentFingerprint: string;
+};
+
 export type SyncPinScopeRequest = {
   scope: PrScope;
   currentFingerprint: string;

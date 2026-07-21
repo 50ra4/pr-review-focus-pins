@@ -145,9 +145,18 @@ h3 {
   padding: 9px 10px;
 }
 .notice {
+  align-items: center;
   background: #fff8c5;
   border: 1px solid #d4a72c;
   color: #633c01;
+  display: flex;
+  font-weight: 600;
+  gap: 10px;
+  justify-content: space-between;
+}
+.notice__action {
+  color: inherit;
+  flex-shrink: 0;
   font-weight: 600;
 }
 .error {

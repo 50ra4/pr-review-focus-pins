@@ -63,6 +63,19 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
     noteLeakedToPage: false,
   });
 
+  await extensionPage.evaluate(() => {
+    const latest = document.createElement('a');
+    latest.dataset.commit = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    latest.href =
+      '/acme/widgets/pull/77/commits/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    document.querySelector('.js-diffbar-range-list')?.append(latest);
+    const diff = document.querySelector('#diff-security');
+    if (diff) diff.textContent = 'updated src/security.ts diff';
+  });
+  await expect(panel.getByText('PR changed since last review')).toBeVisible();
+  await panel.getByRole('button', { name: 'Acknowledge changes' }).click();
+  await expect(panel.getByText('PR changed since last review')).toHaveCount(0);
+
   await panel.getByLabel('Show pinned files only').check();
   await expect(extensionPage.locator('.pr-focus-pins__hidden-row')).toHaveCount(
     2,

@@ -12,6 +12,7 @@ import {
 } from '../pins/guards';
 import { PIN_LIMITS } from '../pins/pinStore';
 import type {
+  AcknowledgePinScopeRequest,
   ClearPinScopeRequest,
   RemovePinRequest,
   SyncPinScopeRequest,
@@ -34,6 +35,14 @@ const isUpsertPinRequest = (value: unknown): value is UpsertPinRequest =>
 const isRemovePinRequest = (value: unknown): value is RemovePinRequest =>
   isRecord(value) && isPrScope(value.scope) && hasValidPath(value.path);
 
+const isAcknowledgePinScopeRequest = (
+  value: unknown,
+): value is AcknowledgePinScopeRequest =>
+  isRecord(value) &&
+  isPrScope(value.scope) &&
+  typeof value.currentFingerprint === 'string' &&
+  value.currentFingerprint.length > 0;
+
 const isSyncPinScopeRequest = (value: unknown): value is SyncPinScopeRequest =>
   isRecord(value) &&
   isPrScope(value.scope) &&
@@ -50,6 +59,10 @@ const isEmptyRequest = (value: unknown): value is Record<string, never> =>
   isRecord(value) && Object.keys(value).length === 0;
 
 export const messages = {
+  acknowledgePinScope: defineMessage(
+    isAcknowledgePinScopeRequest,
+    isPinStoreV1,
+  ),
   upsertPin: defineMessage(isUpsertPinRequest, isPinStoreV1),
   removePin: defineMessage(isRemovePinRequest, isPinStoreV1),
   syncPinScope: defineMessage(isSyncPinScopeRequest, isPinStoreV1),

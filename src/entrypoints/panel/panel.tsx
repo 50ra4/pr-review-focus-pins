@@ -151,6 +151,22 @@ const Root = ({ scope }: { scope: PrScope }) => {
     }
   };
 
+  const acknowledgeChanges = async (): Promise<void> => {
+    if (!snapshot.currentFingerprint) {
+      setError('The GitHub file tree is still loading. Try again shortly.');
+      return;
+    }
+    try {
+      await sendMessage('acknowledgePinScope', {
+        scope,
+        currentFingerprint: snapshot.currentFingerprint,
+      });
+      setError('');
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  };
+
   const clearAll = async (): Promise<void> => {
     if (!window.confirm('Delete all focus pin data from this device?')) return;
     try {
@@ -174,6 +190,7 @@ const Root = ({ scope }: { scope: PrScope }) => {
         validStore ? error || snapshot.error : 'Stored data needs migration.'
       }
       isSaving={isSaving}
+      onAcknowledgeChanges={() => void acknowledgeChanges()}
       onCancelEdit={() => setSelectedPath(null)}
       onClearAll={() => void clearAll()}
       onClearScope={() => void clearScope()}

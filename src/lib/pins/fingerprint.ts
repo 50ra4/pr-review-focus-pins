@@ -5,11 +5,14 @@ export type FingerprintItem = {
 
 export const createRevisionFingerprint = async (
   items: readonly FingerprintItem[],
+  revisionIdentity: string,
 ): Promise<string> => {
-  const input = items
-    .map(({ path, diffAnchor }) => `${path}\t${diffAnchor}\n`)
-    .toSorted()
-    .join('');
+  const input = [
+    `revision\t${revisionIdentity}\n`,
+    ...items
+      .map(({ path, diffAnchor }) => `${path}\t${diffAnchor}\n`)
+      .toSorted(),
+  ].join('');
   const digest = await globalThis.crypto.subtle.digest(
     'SHA-256',
     new TextEncoder().encode(input),

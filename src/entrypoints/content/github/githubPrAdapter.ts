@@ -4,6 +4,7 @@ import type { PrScope } from '../../../lib/pins/types';
 const PR_FILES_URL =
   /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)\/files(?:[/?#]|$)/u;
 const DIFF_ANCHOR = /^#diff-[a-z0-9_-]+$/iu;
+const COMMIT_SHA = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/iu;
 const TREE_SELECTORS = [
   '[role="tree"][aria-label="File Tree"]',
   '[data-testid="file-tree"]',
@@ -13,6 +14,11 @@ const TREE_SELECTORS = [
 ] as const;
 const ROW_SELECTOR =
   '[data-file-tree-item], [data-tree-entry-type="file"], [role="treeitem"], li';
+const REVISION_SELECTORS = [
+  '[data-head-oid]',
+  '[data-url*="end_commit_oid="]',
+  '.js-diffbar-range-list',
+] as const;
 
 export const PIN_BUTTON_ATTRIBUTE = 'data-pr-focus-pin-path';
 export const HIDDEN_ROW_CLASS = 'pr-focus-pins__hidden-row';
@@ -66,12 +72,29 @@ const containsFileTree = (node: Node): boolean => {
   );
 };
 
+const findRevisionRoots = (root: ParentNode): Element[] => {
+  const roots: Element[] = [];
+  for (const selector of REVISION_SELECTORS) {
+    roots.push(...root.querySelectorAll(selector));
+  }
+  return roots;
+};
+
+const containsRevisionRoot = (node: Node): boolean => {
+  if (!(node instanceof Element)) return false;
+  return REVISION_SELECTORS.some(
+    (selector) =>
+      node.matches(selector) || node.querySelector(selector) !== null,
+  );
+};
+
 export const hasFileTreeMutation = (
   mutations: readonly MutationRecord[],
   root: ParentNode,
 ): boolean => {
   const tree = findTreeRoot(root);
   return mutations.some((mutation) => {
+    if (mutation.type !== 'childList') return false;
     if (tree && (mutation.target === tree || tree.contains(mutation.target))) {
       return true;
     }
@@ -79,6 +102,88 @@ export const hasFileTreeMutation = (
       containsFileTree,
     );
   });
+};
+
+export const hasPrHeadMutation = (
+  mutations: readonly MutationRecord[],
+  root: ParentNode,
+): boolean => {
+  const revisionRoots = findRevisionRoots(root);
+  return mutations.some((mutation) => {
+    if (
+      revisionRoots.some(
+        (revisionRoot) =>
+          mutation.target === revisionRoot ||
+          revisionRoot.contains(mutation.target),
+      )
+    ) {
+      return true;
+    }
+    return [...mutation.addedNodes, ...mutation.removedNodes].some(
+      containsRevisionRoot,
+    );
+  });
+};
+
+const readCommitFromHref = (
+  anchor: HTMLAnchorElement,
+  scope: PrScope,
+): string | null => {
+  try {
+    const parsed = new URL(anchor.href, 'https://github.com');
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    const sha = segments[5];
+    if (
+      segments.length !== 6 ||
+      segments[0].toLowerCase() !== scope.owner.toLowerCase() ||
+      segments[1].toLowerCase() !== scope.repository.toLowerCase() ||
+      segments[2] !== 'pull' ||
+      segments[3] !== String(scope.pullNumber) ||
+      segments[4] !== 'commits' ||
+      !COMMIT_SHA.test(sha)
+    ) {
+      return null;
+    }
+    const dataCommit = anchor.dataset.commit;
+    return dataCommit && COMMIT_SHA.test(dataCommit) && dataCommit === sha
+      ? dataCommit.toLowerCase()
+      : sha.toLowerCase();
+  } catch {
+    return null;
+  }
+};
+
+export const extractPrHeadCommit = (
+  root: ParentNode,
+  scope: PrScope,
+): string | null => {
+  for (const element of root.querySelectorAll<HTMLElement>('[data-head-oid]')) {
+    const value = element.dataset.headOid;
+    if (value && COMMIT_SHA.test(value)) return value.toLowerCase();
+  }
+
+  for (const element of root.querySelectorAll<HTMLElement>(
+    '[data-url*="end_commit_oid="]',
+  )) {
+    const value = element.dataset.url;
+    if (!value) continue;
+    try {
+      const sha = new URL(value, 'https://github.com').searchParams.get(
+        'end_commit_oid',
+      );
+      if (sha && COMMIT_SHA.test(sha)) return sha.toLowerCase();
+    } catch {
+      continue;
+    }
+  }
+
+  let latest: string | null = null;
+  for (const anchor of root.querySelectorAll<HTMLAnchorElement>(
+    'a[data-commit]',
+  )) {
+    latest = readCommitFromHref(anchor, scope) ?? latest;
+  }
+  return latest;
 };
 
 const readFileCount = (element: Element): number | null => {
