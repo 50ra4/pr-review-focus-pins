@@ -58,6 +58,29 @@ const findTreeRoot = (root: ParentNode): Element | null => {
   return null;
 };
 
+const containsFileTree = (node: Node): boolean => {
+  if (!(node instanceof Element)) return false;
+  return TREE_SELECTORS.some(
+    (selector) =>
+      node.matches(selector) || node.querySelector(selector) !== null,
+  );
+};
+
+export const hasFileTreeMutation = (
+  mutations: readonly MutationRecord[],
+  root: ParentNode,
+): boolean => {
+  const tree = findTreeRoot(root);
+  return mutations.some((mutation) => {
+    if (tree && (mutation.target === tree || tree.contains(mutation.target))) {
+      return true;
+    }
+    return [...mutation.addedNodes, ...mutation.removedNodes].some(
+      containsFileTree,
+    );
+  });
+};
+
 const readFileCount = (element: Element): number | null => {
   const encoded = element.getAttribute('data-hydro-click-payload');
   if (!encoded) return null;

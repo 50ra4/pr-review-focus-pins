@@ -4,6 +4,7 @@ import rowButtonStyles from './githubRowButtons.css?inline';
 import {
   cleanupFileTree,
   extractFileTreeItems,
+  hasFileTreeMutation,
   injectPinButtons,
   parsePrFilesUrl,
   setPinOnlyMode,
@@ -148,10 +149,15 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
         window.dispatchEvent(new Event(NAVIGATION_EVENT));
         return;
       }
-      clearTimeout(timeout);
-      timeout = setTimeout(() => void scan(), 100);
+      if (timeout !== undefined) return;
+      timeout = setTimeout(() => {
+        timeout = undefined;
+        void scan();
+      }, 100);
     };
-    const observer = new MutationObserver(scheduleScan);
+    const observer = new MutationObserver((mutations) => {
+      if (hasFileTreeMutation(mutations, document)) scheduleScan();
+    });
     observer.observe(document.body, { childList: true, subtree: true });
     void scan();
     return () => {

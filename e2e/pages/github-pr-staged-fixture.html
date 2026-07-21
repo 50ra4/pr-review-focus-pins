@@ -19,7 +19,10 @@
         </li>
       </ul>
     </aside>
-    <main><div id="diff-readme">README.md diff</div></main>
+    <main>
+      <div id="diff-readme">README.md diff</div>
+      <div id="render-noise"></div>
+    </main>
     <script>
       window.setTimeout(() => {
         const tree = document.querySelector('[data-file-tree]');
@@ -34,6 +37,12 @@
         diff.textContent = 'src/security.ts diff';
         document.querySelector('main')?.append(diff);
       }, 1_500);
+
+      const noise = document.querySelector('#render-noise');
+      const noiseTimer = window.setInterval(() => {
+        noise?.append(document.createElement('span'));
+      }, 25);
+      window.setTimeout(() => window.clearInterval(noiseTimer), 4_000);
     </script>
   </body>
 </html>

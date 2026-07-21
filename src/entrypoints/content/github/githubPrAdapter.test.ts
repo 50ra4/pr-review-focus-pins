@@ -4,6 +4,7 @@ import nestedFixture from './fixtures/pr-files-nested.html?raw';
 import rerenderedFixture from './fixtures/pr-files-rerendered.html?raw';
 import {
   extractFileTreeItems,
+  hasFileTreeMutation,
   injectPinButtons,
   parsePrFilesUrl,
   setPinOnlyMode,
@@ -130,6 +131,31 @@ describe('GitHub PR adapter', () => {
 
     observer.disconnect();
     expect(onMutation).not.toHaveBeenCalled();
+  });
+
+  it('ignores unrelated body mutations and detects file-tree mutations', async () => {
+    document.body.innerHTML = `${nestedFixture}<main id="diffs"></main>`;
+    const collectMutation = (mutate: () => void): Promise<MutationRecord[]> =>
+      new Promise((resolve) => {
+        const observer = new MutationObserver((records) => {
+          observer.disconnect();
+          resolve(records);
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        mutate();
+      });
+
+    const unrelated = await collectMutation(() => {
+      document.querySelector('#diffs')?.append(document.createElement('span'));
+    });
+    expect(hasFileTreeMutation(unrelated, document)).toBe(false);
+
+    const related = await collectMutation(() => {
+      document
+        .querySelector('[data-file-tree]')
+        ?.append(document.createElement('li'));
+    });
+    expect(hasFileTreeMutation(related, document)).toBe(true);
   });
 
   it('restores every row after pin-only mode is disabled', () => {

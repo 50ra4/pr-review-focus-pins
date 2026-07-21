@@ -127,6 +127,7 @@ test('waits for staged file-tree rendering before recording the revision', async
 
   await expect(extensionPage.locator('[data-pr-focus-pin-path]')).toHaveCount(
     2,
+    { timeout: 2_500 },
   );
   await extensionPage.waitForTimeout(500);
   await expect(panel.getByText('PR changed since last review')).toHaveCount(0);
