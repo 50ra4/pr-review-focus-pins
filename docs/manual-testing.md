@@ -21,8 +21,9 @@ Run the same checks on one public PR and one private PR the tester is authorized
 6. Navigate away and back with GitHub SPA links, browser Back, and Forward. Confirm the panel appears only on a `/files` URL and PR scopes do not mix.
 7. Open the same PR in two tabs, pin different files at nearly the same time, and confirm both pins remain.
 8. Test in GitHub light and dark themes and at a narrow browser width. Confirm focus rings, contrast, and panel access remain usable.
-9. When a PR adds/removes files, confirm the change warning appears only after the rendered tree count matches GitHub's `file_count`, existing pins remain, and removed pinned paths are marked **Stale**.
-10. Delete this PR's data, then create another pin and delete all data. Reload after each action to confirm deletion.
+9. Push a change that modifies only an already listed file and confirm the change warning appears even though the path set is unchanged. Select **Acknowledge changes** and confirm the warning clears.
+10. When a PR adds/removes files, confirm the change warning appears only after the rendered tree count matches GitHub's `file_count`, existing pins remain, and removed pinned paths are marked **Stale**.
+11. Delete this PR's data, then create another pin and delete all data. Reload after each action to confirm deletion.
 
 ## Safety checks
 

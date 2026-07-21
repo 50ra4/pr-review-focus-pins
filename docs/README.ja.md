@@ -10,7 +10,7 @@ PR Review Focus Pinsは、大規模なGitHub Pull Request内に個人用レビ�
 - `revisit`、`question`、`test`、`risk`、`custom`の理由と、最大200 Unicode文字のメモを保存します。
 - GitHubとは別originの単一パネルで、前後移動、編集、解除、stale表示を行います。理由とメモはGitHubのDOMへ描画しません。
 - 「pinのみ」はファイルツリーの未pin行だけを隠します。diff本文とGitHubのViewed状態は変えません。
-- ファイル集合のSHA-256 fingerprintを端末内で計算し、PR更新を検知しても既存pinを保持します。
+- PRのhead commitとファイル集合からSHA-256 fingerprintを端末内で計算し、PR更新を検知しても既存pinを保持します。確認後は変更警告を解除できます。
 - repository/PR単位で状態を分離し、GitHubのSPA遷移と遅延描画・再描画へ追従します。
 - PR単位または全体の保存データを削除できます。
 
@@ -33,6 +33,7 @@ pinデータは現在のChrome profileの`chrome.storage.local`だけへ保存�
 2. 対象ファイル横のpinボタンを押します。
 3. 理由と任意のメモを入力し、**Save pin**を押します。
 4. 右下パネルから絞り込み、移動、編集、解除を行います。
+5. PR更新時は新しいrevisionを確認し、**Acknowledge changes**で警告を解除します。
 
 上限は1 PRあたり200 pin、全体500 pin、100 PR scopeです。超過時はエラーを表示し、古いpinを自動削除しません。
 
