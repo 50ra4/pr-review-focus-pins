@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installChromeFake } from '../../lib/testing/chromeFake';
 import { sendMessage } from '../../lib/messaging/messages';
 
+let chromeFake: ReturnType<typeof installChromeFake>;
+
 describe('background pin mutation queue', () => {
   beforeEach(async () => {
-    installChromeFake();
+    chromeFake = installChromeFake();
     vi.resetModules();
     await import('./background');
   });
@@ -63,5 +65,33 @@ describe('background pin mutation queue', () => {
         currentPaths: ['src/a.ts'],
       }),
     ).resolves.toMatchObject({ version: 1 });
+  });
+
+  it('clears invalid stored data and allows normal mutations afterward', async () => {
+    await chromeFake.setStoredValue('local', 'pinStore', {
+      version: 2,
+      scopes: { broken: true },
+    });
+
+    await expect(sendMessage('clearAllPins', {})).resolves.toEqual({
+      version: 1,
+      scopes: {},
+    });
+    await expect(
+      sendMessage('upsertPin', {
+        scope: { owner: 'OpenAI', repository: 'Codex', pullNumber: 42 },
+        path: 'src/a.ts',
+        reason: 'risk',
+        note: '',
+        currentFingerprint: 'fingerprint',
+      }),
+    ).resolves.toMatchObject({
+      version: 1,
+      scopes: {
+        'openai/codex#42': {
+          pins: { 'src/a.ts': { reason: 'risk' } },
+        },
+      },
+    });
   });
 });

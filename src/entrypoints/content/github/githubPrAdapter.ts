@@ -17,7 +17,6 @@ const ROW_SELECTOR =
 const REVISION_SELECTORS = [
   '[data-head-oid]',
   '[data-url*="end_commit_oid="]',
-  '.js-diffbar-range-list',
 ] as const;
 
 export const PIN_BUTTON_ATTRIBUTE = 'data-pr-focus-pin-path';
@@ -125,37 +124,9 @@ export const hasPrHeadMutation = (
   });
 };
 
-const readCommitFromHref = (
-  anchor: HTMLAnchorElement,
-  scope: PrScope,
-): string | null => {
-  try {
-    const parsed = new URL(anchor.href, 'https://github.com');
-    const segments = parsed.pathname.split('/').filter(Boolean);
-    const sha = segments[5];
-    if (
-      segments.length !== 6 ||
-      segments[0].toLowerCase() !== scope.owner.toLowerCase() ||
-      segments[1].toLowerCase() !== scope.repository.toLowerCase() ||
-      segments[2] !== 'pull' ||
-      segments[3] !== String(scope.pullNumber) ||
-      segments[4] !== 'commits' ||
-      !COMMIT_SHA.test(sha)
-    ) {
-      return null;
-    }
-    const dataCommit = anchor.dataset.commit;
-    return dataCommit && COMMIT_SHA.test(dataCommit) && dataCommit === sha
-      ? dataCommit.toLowerCase()
-      : sha.toLowerCase();
-  } catch {
-    return null;
-  }
-};
-
 export const extractPrHeadCommit = (
   root: ParentNode,
-  scope: PrScope,
+  _scope: PrScope,
 ): string | null => {
   for (const element of root.querySelectorAll<HTMLElement>('[data-head-oid]')) {
     const value = element.dataset.headOid;
@@ -177,13 +148,7 @@ export const extractPrHeadCommit = (
     }
   }
 
-  let latest: string | null = null;
-  for (const anchor of root.querySelectorAll<HTMLAnchorElement>(
-    'a[data-commit]',
-  )) {
-    latest = readCommitFromHref(anchor, scope) ?? latest;
-  }
-  return latest;
+  return null;
 };
 
 const readFileCount = (element: Element): number | null => {

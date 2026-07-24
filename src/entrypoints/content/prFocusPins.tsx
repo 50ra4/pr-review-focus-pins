@@ -21,7 +21,10 @@ import {
   type PanelSnapshot,
 } from '../../lib/messaging/panelBridge';
 import { sendMessage } from '../../lib/messaging/messages';
-import { createRevisionFingerprint } from '../../lib/pins/fingerprint';
+import {
+  createFileTreeSignature,
+  createRevisionFingerprint,
+} from '../../lib/pins/fingerprint';
 import { createScopeKey, isPinStoreV1 } from '../../lib/pins/guards';
 import type { PinStoreV1, PrScope } from '../../lib/pins/types';
 import { getExtensionUrl } from '../../lib/runtime/getExtensionUrl';
@@ -61,6 +64,7 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
   const [diagnostics, setDiagnostics] =
     useState<FileTreeDiagnostics>(EMPTY_DIAGNOSTICS);
   const [fingerprint, setFingerprint] = useState('');
+  const [currentPathsComplete, setCurrentPathsComplete] = useState(false);
   const [pinOnly, setPinOnly] = useState(false);
   const [error, setError] = useState('');
   const [colorMode, setColorMode] = useState(
@@ -68,6 +72,7 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
   );
   const storeRef = useRef<PinStoreV1 | null>(store);
   const itemsRef = useRef<FileTreeItem[]>(items);
+  const fingerprintRef = useRef(fingerprint);
   const snapshotRef = useRef<PanelSnapshot | null>(null);
 
   useEffect(() => {
@@ -94,14 +99,14 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
       colorMode,
       currentFingerprint: fingerprint,
       currentPaths: items.map((item) => item.path),
+      currentPathsComplete,
       error,
       uiNotRecognized:
         diagnostics.treeFound &&
         diagnostics.candidateCount > 0 &&
-        ((diagnostics.expectedFileCount !== null && !diagnostics.complete) ||
-          items.length === 0),
+        items.length === 0,
     }),
-    [colorMode, diagnostics, error, fingerprint, items],
+    [colorMode, currentPathsComplete, diagnostics, error, fingerprint, items],
   );
   snapshotRef.current = snapshot;
 
@@ -129,34 +134,48 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
       );
       if (extraction.items.length === 0) {
         stability.cancel();
+        fingerprintRef.current = '';
         setFingerprint('');
+        setCurrentPathsComplete(false);
         return;
       }
       const headCommit = extractPrHeadCommit(document, scope);
       if (!headCommit) {
         stability.cancel();
+        fingerprintRef.current = '';
         setFingerprint('');
+        setCurrentPathsComplete(false);
         setError('GitHub PR revision could not be identified.');
         return;
       }
       const nextFingerprint = await createRevisionFingerprint(
         extraction.items,
         headCommit,
+        extraction.diagnostics.expectedFileCount,
       );
       if (!active || sequence !== scanSequence) return;
-      const hasExpectedCount =
-        extraction.diagnostics.expectedFileCount !== null;
-      if (
-        (hasExpectedCount && !extraction.diagnostics.complete) ||
-        (!hasExpectedCount &&
-          !stability.observe(nextFingerprint, extraction.items.length))
-      ) {
-        if (hasExpectedCount) stability.cancel();
-        setFingerprint('');
+      setError('');
+      const stable =
+        extraction.diagnostics.complete ||
+        stability.observe(
+          createFileTreeSignature(extraction.items, headCommit),
+          extraction.items.length,
+        );
+      if (!stable) {
+        setCurrentPathsComplete(false);
+        if (fingerprintRef.current !== nextFingerprint) {
+          fingerprintRef.current = '';
+          setFingerprint('');
+        }
         return;
       }
-      if (hasExpectedCount) stability.cancel();
+      if (extraction.diagnostics.complete) stability.cancel();
+      fingerprintRef.current = nextFingerprint;
       setFingerprint(nextFingerprint);
+      setCurrentPathsComplete(
+        extraction.diagnostics.complete ||
+          extraction.diagnostics.expectedFileCount === null,
+      );
       try {
         await sendMessage('syncPinScope', {
           scope,
@@ -192,7 +211,7 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
       }
     });
     observer.observe(document.body, {
-      attributeFilter: ['data-commit', 'data-head-oid', 'data-url', 'href'],
+      attributeFilter: ['data-head-oid', 'data-url'],
       attributes: true,
       childList: true,
       subtree: true,

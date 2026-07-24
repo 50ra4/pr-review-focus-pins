@@ -64,11 +64,12 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
   });
 
   await extensionPage.evaluate(() => {
-    const latest = document.createElement('a');
-    latest.dataset.commit = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-    latest.href =
-      '/acme/widgets/pull/77/commits/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-    document.querySelector('.js-diffbar-range-list')?.append(latest);
+    document
+      .querySelector('[data-head-oid]')
+      ?.setAttribute(
+        'data-head-oid',
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      );
     const diff = document.querySelector('#diff-security');
     if (diff) diff.textContent = 'updated src/security.ts diff';
   });
@@ -107,6 +108,12 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
   await extensionPage.evaluate(() => {
     document.querySelector('[data-file-tree-item="security"]')?.remove();
     document.querySelector('#diff-security')?.remove();
+    document.querySelector('[data-file-tree]')?.setAttribute(
+      'data-hydro-click-payload',
+      JSON.stringify({
+        payload: { category: 'file_tree', data: { file_count: 3 } },
+      }),
+    );
   });
   await expect(panel.getByText('Stale', { exact: true })).toBeVisible();
   await panel.getByRole('button', { name: 'Remove src/security.ts' }).click();
@@ -198,6 +205,43 @@ test('saves a pin when GitHub omits file_count metadata', async ({
       '[data-pr-focus-pin-path="src/security.ts"][aria-pressed="true"]',
     ),
   ).toHaveCount(1);
+});
+
+test('keeps a stable partial file tree usable without false warnings', async ({
+  extensionPage,
+}) => {
+  const html = (await readFile(fixturePath, 'utf8'))
+    .replaceAll('/pull/77/', '/pull/79/')
+    .replace('"file_count":3', '"file_count":100');
+  await extensionPage.unroute('https://github.com/**');
+  await extensionPage.route('https://github.com/**', (route) =>
+    route.fulfill({ body: html, contentType: 'text/html' }),
+  );
+  await extensionPage.goto('https://github.com/acme/widgets/pull/79/files');
+
+  const panel = extensionPage.frameLocator(panelSelector);
+  await expect(
+    panel.getByText('GitHub UI not recognized. No file rows were changed.'),
+  ).toHaveCount(0);
+  await extensionPage
+    .locator('[data-pr-focus-pin-path="src/security.ts"]')
+    .click();
+  await panel.getByLabel('Note').fill('Virtualized tree');
+  await extensionPage.waitForTimeout(3_000);
+  await panel.getByRole('button', { name: 'Save pin' }).click();
+  await expect(
+    extensionPage.locator(
+      '[data-pr-focus-pin-path="src/security.ts"][aria-pressed="true"]',
+    ),
+  ).toHaveCount(1);
+
+  await extensionPage.evaluate(() => {
+    document.querySelector('[data-file-tree-item="security"]')?.remove();
+    document.querySelector('#diff-security')?.remove();
+  });
+  await expect(panel.getByText('Virtualized tree')).toBeVisible();
+  await expect(panel.getByText('Stale', { exact: true })).toHaveCount(0);
+  await expect(panel.getByText('PR changed since last review')).toHaveCount(0);
 });
 
 test('panel remains visible in a narrow dark viewport', async ({

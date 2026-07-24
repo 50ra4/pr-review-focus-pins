@@ -5,6 +5,7 @@ export type PanelSnapshot = {
   colorMode: string;
   currentFingerprint: string;
   currentPaths: string[];
+  currentPathsComplete: boolean;
   error: string;
   uiNotRecognized: boolean;
 };
@@ -32,6 +33,7 @@ export const isContentToPanelMessage = (
     typeof value.currentFingerprint === 'string' &&
     Array.isArray(value.currentPaths) &&
     value.currentPaths.every(hasPath) &&
+    typeof value.currentPathsComplete === 'boolean' &&
     typeof value.error === 'string' &&
     typeof value.uiNotRecognized === 'boolean'
   );

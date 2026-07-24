@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './focusPins.css';
 import { FocusPinsPanel } from './FocusPinsPanel';
+import { getRelativePath } from './navigation';
 import {
   isContentToPanelMessage,
   type PanelSnapshot,
@@ -19,6 +20,7 @@ const EMPTY_SNAPSHOT: PanelSnapshot = {
   colorMode: 'auto',
   currentFingerprint: '',
   currentPaths: [],
+  currentPathsComplete: false,
   error: '',
   uiNotRecognized: false,
 };
@@ -48,7 +50,7 @@ const Root = ({ scope }: { scope: PrScope }) => {
   const [error, setError] = useState('');
   const [saveError, setSaveError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [jumpIndex, setJumpIndex] = useState(-1);
+  const [currentJumpPath, setCurrentJumpPath] = useState<string | null>(null);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent<unknown>): void => {
@@ -76,13 +78,13 @@ const Root = ({ scope }: { scope: PrScope }) => {
   const stalePaths = useMemo(
     () =>
       new Set(
-        scopeState
+        scopeState && snapshot.currentPathsComplete
           ? getStalePins(scopeState, snapshot.currentPaths).map(
               (pin) => pin.path,
             )
           : [],
       ),
-    [scopeState, snapshot.currentPaths],
+    [scopeState, snapshot.currentPaths, snapshot.currentPathsComplete],
   );
   const pins = useMemo(
     () =>
@@ -127,16 +129,17 @@ const Root = ({ scope }: { scope: PrScope }) => {
   };
 
   const jumpTo = (path: string): void => {
+    setCurrentJumpPath(path);
     postCommand({ type: 'jump', path });
   };
 
   const jumpRelative = (offset: number): void => {
-    const available = pins.filter(({ stale }) => !stale);
-    if (available.length === 0) return;
-    const nextIndex =
-      (jumpIndex + offset + available.length) % available.length;
-    setJumpIndex(nextIndex);
-    jumpTo(available[nextIndex].pin.path);
+    const path = getRelativePath(
+      pins.filter(({ stale }) => !stale).map(({ pin }) => pin.path),
+      currentJumpPath,
+      offset,
+    );
+    if (path) jumpTo(path);
   };
 
   const clearScope = async (): Promise<void> => {

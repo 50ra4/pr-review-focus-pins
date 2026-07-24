@@ -109,12 +109,11 @@ describe('GitHub PR adapter', () => {
     expect(result.diagnostics.complete).toBe(false);
   });
 
-  it('extracts the latest scoped PR commit independently of the file paths', () => {
+  it('ignores commit links whose DOM order does not identify the PR head', () => {
     document.body.innerHTML = `
       <div class="js-diffbar-range-list">
         <a data-commit="${'a'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'a'.repeat(40)}">first</a>
         <a data-commit="${'b'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'b'.repeat(40)}">latest</a>
-        <a data-commit="${'c'.repeat(40)}" href="/other/widgets/pull/77/commits/${'c'.repeat(40)}">other PR</a>
       </div>
     `;
 
@@ -124,7 +123,7 @@ describe('GitHub PR adapter', () => {
         repository: 'widgets',
         pullNumber: 77,
       }),
-    ).toBe('b'.repeat(40));
+    ).toBeNull();
   });
 
   it.each([
@@ -150,8 +149,7 @@ describe('GitHub PR adapter', () => {
 
   it('detects revision metadata changes even when another strategy is present', async () => {
     document.body.innerHTML = `
-      <div data-url="/comparison?end_commit_oid=${'a'.repeat(40)}"></div>
-      <div class="js-diffbar-range-list"></div>
+      <div data-head-oid="${'a'.repeat(40)}"></div>
       <main></main>
     `;
     const collectMutation = (mutate: () => void): Promise<MutationRecord[]> =>
@@ -160,7 +158,12 @@ describe('GitHub PR adapter', () => {
           observer.disconnect();
           resolve(records);
         });
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(document.body, {
+          attributeFilter: ['data-head-oid'],
+          attributes: true,
+          childList: true,
+          subtree: true,
+        });
         mutate();
       });
 
@@ -171,8 +174,8 @@ describe('GitHub PR adapter', () => {
 
     const revision = await collectMutation(() => {
       document
-        .querySelector('.js-diffbar-range-list')
-        ?.append(document.createElement('a'));
+        .querySelector('[data-head-oid]')
+        ?.setAttribute('data-head-oid', 'b'.repeat(40));
     });
     expect(hasPrHeadMutation(revision, document)).toBe(true);
   });

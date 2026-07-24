@@ -22,8 +22,9 @@ Run the same checks on one public PR and one private PR the tester is authorized
 7. Open the same PR in two tabs, pin different files at nearly the same time, and confirm both pins remain.
 8. Test in GitHub light and dark themes and at a narrow browser width. Confirm focus rings, contrast, and panel access remain usable.
 9. Push a change that modifies only an already listed file and confirm the change warning appears even though the path set is unchanged. Select **Acknowledge changes** and confirm the warning clears.
-10. When a PR adds/removes files, confirm the change warning appears only after the rendered tree count matches GitHub's `file_count`, existing pins remain, and removed pinned paths are marked **Stale**.
-11. Delete this PR's data, then create another pin and delete all data. Reload after each action to confirm deletion.
+10. On a PR with 100 or more files, confirm pins can be saved even when GitHub virtualizes the tree and the rendered row count never reaches `file_count`. Confirm loading does not show “GitHub UI not recognized,” scrolling does not create a false revision warning, and temporarily unrendered pins are not marked **Stale**.
+11. When a complete tree adds or removes files, confirm the change warning appears, existing pins remain, and removed pinned paths are marked **Stale**.
+12. Delete this PR's data, then create another pin and delete all data. Corrupt or replace the stored schema in a disposable profile and confirm **Delete all pin data** still restores normal operation. Reload after each action to confirm deletion.
 
 ## Safety checks
 

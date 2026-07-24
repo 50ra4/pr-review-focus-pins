@@ -2,7 +2,6 @@ import { addMessageListeners } from '../../lib/messaging/messages';
 import { isPinStoreV1 } from '../../lib/pins/guards';
 import {
   acknowledgePinScope,
-  clearAllPins,
   clearPinScope,
   removePin,
   syncPinScope,
@@ -37,6 +36,13 @@ const mutateStore = (
     return next;
   });
 
+const resetStore = (): Promise<PinStoreV1> =>
+  enqueueMutation(async () => {
+    const next: PinStoreV1 = { version: 1, scopes: {} };
+    await setStorageValue('pinStore', next);
+    return next;
+  });
+
 addMessageListeners({
   acknowledgePinScope: (payload) =>
     mutateStore((store) =>
@@ -51,5 +57,5 @@ addMessageListeners({
     ),
   clearPinScope: (payload) =>
     mutateStore((store) => clearPinScope(store, payload)),
-  clearAllPins: () => mutateStore(clearAllPins),
+  clearAllPins: resetStore,
 });

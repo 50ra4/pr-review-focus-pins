@@ -17,6 +17,11 @@ type ChromeFakeOptions = {
 export type ChromeFake = {
   chrome: ChromeApiFake;
   setRuntimeSender: (sender: chrome.runtime.MessageSender) => void;
+  setStoredValue: (
+    areaName: chrome.storage.AreaName,
+    key: string,
+    value: unknown,
+  ) => Promise<void>;
 };
 
 type ChromeApiFake = {
@@ -230,6 +235,9 @@ export const createChromeFake = (
     chrome: chromeFake,
     setRuntimeSender: (sender) => {
       runtimeSender = sender;
+    },
+    setStoredValue: async (areaName, key, value) => {
+      await chromeFake.storage[areaName].set({ [key]: value });
     },
   };
 };

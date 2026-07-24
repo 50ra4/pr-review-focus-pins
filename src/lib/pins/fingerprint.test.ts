@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createRevisionFingerprint } from './fingerprint';
+import {
+  createFileTreeSignature,
+  createRevisionFingerprint,
+} from './fingerprint';
 
 describe('revision fingerprint', () => {
   it('is independent of DOM order', async () => {
@@ -41,6 +44,40 @@ describe('revision fingerprint', () => {
 
     const first = await createRevisionFingerprint(items, 'head-a');
     const second = await createRevisionFingerprint(items, 'head-b');
+
+    expect(second).not.toBe(first);
+  });
+
+  it('uses GitHub file_count instead of a partial rendered subset when available', async () => {
+    const partial = await createRevisionFingerprint(
+      [{ path: 'src/a.ts', diffAnchor: '#diff-a' }],
+      'head-a',
+      100,
+    );
+    const differentSubset = await createRevisionFingerprint(
+      [{ path: 'src/z.ts', diffAnchor: '#diff-z' }],
+      'head-a',
+      100,
+    );
+    const changedCount = await createRevisionFingerprint(
+      [{ path: 'src/a.ts', diffAnchor: '#diff-a' }],
+      'head-a',
+      101,
+    );
+
+    expect(differentSubset).toBe(partial);
+    expect(changedCount).not.toBe(partial);
+  });
+
+  it('creates a stability signature from the rendered paths', () => {
+    const first = createFileTreeSignature(
+      [{ path: 'src/a.ts', diffAnchor: '#diff-a' }],
+      'head-a',
+    );
+    const second = createFileTreeSignature(
+      [{ path: 'src/b.ts', diffAnchor: '#diff-b' }],
+      'head-a',
+    );
 
     expect(second).not.toBe(first);
   });

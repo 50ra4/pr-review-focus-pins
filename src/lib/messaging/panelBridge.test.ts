@@ -12,6 +12,7 @@ describe('panel bridge guards', () => {
         colorMode: 'dark',
         currentFingerprint: 'fingerprint',
         currentPaths: ['src/a.ts'],
+        currentPathsComplete: true,
         error: '',
         uiNotRecognized: false,
       }),
@@ -26,5 +27,15 @@ describe('panel bridge guards', () => {
     expect(isContentToPanelMessage({ type: 'selectPath', path: '/' })).toBe(
       false,
     );
+    expect(
+      isContentToPanelMessage({
+        type: 'snapshot',
+        colorMode: 'dark',
+        currentFingerprint: 'fingerprint',
+        currentPaths: ['src/a.ts'],
+        error: '',
+        uiNotRecognized: false,
+      }),
+    ).toBe(false);
   });
 });
