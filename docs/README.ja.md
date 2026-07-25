@@ -10,7 +10,7 @@ PR Review Focus Pinsは、大規模なGitHub Pull Request内に個人用レビ�
 - `revisit`、`question`、`test`、`risk`、`custom`の理由と、最大200 Unicode文字のメモを保存します。
 - GitHubとは別originの単一パネルで、前後移動、編集、解除、stale表示を行います。理由とメモはGitHubのDOMへ描画しません。
 - 「pinのみ」はファイルツリーの未pin行だけを隠します。diff本文とGitHubのViewed状態は変えません。
-- PRのhead commitとファイル情報からSHA-256 fingerprintを端末内で計算します。GitHubのfile countが取得できる場合はそれを使い、仮想化された部分ツリーを別revisionと誤認しません。取得できない場合は安定した描画済みpath集合を使います。
+- PRのhead commitからSHA-256 fingerprintを端末内で計算します。file treeのpathとGitHubのfile countは描画安定性とstale判定だけに使うため、metadataの遅延挿入を別revisionと誤認しません。
 - repository/PR単位で状態を分離し、GitHubのSPA遷移と遅延描画・再描画へ追従します。
 - PR単位または全体の保存データを削除できます。
 

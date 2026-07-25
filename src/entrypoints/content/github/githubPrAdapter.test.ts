@@ -109,12 +109,28 @@ describe('GitHub PR adapter', () => {
     expect(result.diagnostics.complete).toBe(false);
   });
 
-  it('ignores commit links whose DOM order does not identify the PR head', () => {
+  it('extracts a unique scoped commit-graph head independently of DOM order', () => {
     document.body.innerHTML = `
       <div class="js-diffbar-range-list">
-        <a data-commit="${'a'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'a'.repeat(40)}">first</a>
-        <a data-commit="${'b'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'b'.repeat(40)}">latest</a>
+        <a data-commit="${'b'.repeat(40)}" data-parent-commit="${'a'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'b'.repeat(40)}">head first in DOM</a>
+        <a data-commit="${'c'.repeat(40)}" href="/other/widgets/pull/77/commits/${'c'.repeat(40)}">other PR</a>
+        <a data-commit="${'a'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'a'.repeat(40)}">parent later in DOM</a>
       </div>
+    `;
+
+    expect(
+      extractPrHeadCommit(document, {
+        owner: 'acme',
+        repository: 'widgets',
+        pullNumber: 77,
+      }),
+    ).toBe('b'.repeat(40));
+  });
+
+  it('rejects an ambiguous commit graph with multiple tips', () => {
+    document.body.innerHTML = `
+      <a data-commit="${'a'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'a'.repeat(40)}">one</a>
+      <a data-commit="${'b'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'b'.repeat(40)}">two</a>
     `;
 
     expect(

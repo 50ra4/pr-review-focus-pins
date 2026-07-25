@@ -17,6 +17,7 @@ const ROW_SELECTOR =
 const REVISION_SELECTORS = [
   '[data-head-oid]',
   '[data-url*="end_commit_oid="]',
+  'a[data-commit][href*="/pull/"]',
 ] as const;
 
 export const PIN_BUTTON_ATTRIBUTE = 'data-pr-focus-pin-path';
@@ -124,9 +125,54 @@ export const hasPrHeadMutation = (
   });
 };
 
+const readScopedCommit = (
+  anchor: HTMLAnchorElement,
+  scope: PrScope,
+): string | null => {
+  const dataCommit = anchor.dataset.commit;
+  if (!dataCommit || !COMMIT_SHA.test(dataCommit)) return null;
+  try {
+    const parsed = new URL(anchor.href, 'https://github.com');
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    if (
+      segments.length !== 6 ||
+      segments[0].toLowerCase() !== scope.owner.toLowerCase() ||
+      segments[1].toLowerCase() !== scope.repository.toLowerCase() ||
+      segments[2] !== 'pull' ||
+      segments[3] !== String(scope.pullNumber) ||
+      segments[4] !== 'commits' ||
+      segments[5].toLowerCase() !== dataCommit.toLowerCase()
+    ) {
+      return null;
+    }
+    return dataCommit.toLowerCase();
+  } catch {
+    return null;
+  }
+};
+
+const extractCommitGraphHead = (
+  root: ParentNode,
+  scope: PrScope,
+): string | null => {
+  const commits = new Set<string>();
+  const parents = new Set<string>();
+  for (const anchor of root.querySelectorAll<HTMLAnchorElement>(
+    'a[data-commit]',
+  )) {
+    const commit = readScopedCommit(anchor, scope);
+    if (!commit) continue;
+    commits.add(commit);
+    const parent = anchor.dataset.parentCommit;
+    if (parent && COMMIT_SHA.test(parent)) parents.add(parent.toLowerCase());
+  }
+  const heads = [...commits].filter((commit) => !parents.has(commit));
+  return heads.length === 1 ? heads[0] : null;
+};
+
 export const extractPrHeadCommit = (
   root: ParentNode,
-  _scope: PrScope,
+  scope: PrScope,
 ): string | null => {
   for (const element of root.querySelectorAll<HTMLElement>('[data-head-oid]')) {
     const value = element.dataset.headOid;
@@ -148,7 +194,7 @@ export const extractPrHeadCommit = (
     }
   }
 
-  return null;
+  return extractCommitGraphHead(root, scope);
 };
 
 const readFileCount = (element: Element): number | null => {

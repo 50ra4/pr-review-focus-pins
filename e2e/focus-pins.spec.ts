@@ -87,6 +87,12 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
   );
 
   await extensionPage.evaluate(() => {
+    document
+      .querySelector('[data-head-oid]')
+      ?.setAttribute(
+        'data-head-oid',
+        'cccccccccccccccccccccccccccccccccccccccc',
+      );
     const tree = document.querySelector('[data-file-tree]');
     const row = document.createElement('li');
     row.dataset.fileTreeItem = '';
@@ -106,6 +112,12 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
   await expect(panel.getByText('PR changed since last review')).toBeVisible();
 
   await extensionPage.evaluate(() => {
+    document
+      .querySelector('[data-head-oid]')
+      ?.setAttribute(
+        'data-head-oid',
+        'dddddddddddddddddddddddddddddddddddddddd',
+      );
     document.querySelector('[data-file-tree-item="security"]')?.remove();
     document.querySelector('#diff-security')?.remove();
     document.querySelector('[data-file-tree]')?.setAttribute(
@@ -160,6 +172,12 @@ test('waits for staged file-tree rendering before recording the revision', async
   ).toHaveCount(1);
 
   await extensionPage.evaluate(() => {
+    document
+      .querySelector('[data-head-oid]')
+      ?.setAttribute(
+        'data-head-oid',
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      );
     const tree = document.querySelector('[data-file-tree]');
     const row = document.createElement('li');
     row.dataset.fileTreeItem = 'new';
@@ -205,6 +223,18 @@ test('saves a pin when GitHub omits file_count metadata', async ({
       '[data-pr-focus-pin-path="src/security.ts"][aria-pressed="true"]',
     ),
   ).toHaveCount(1);
+
+  await extensionPage.evaluate(() => {
+    const metadata = document.createElement('span');
+    metadata.setAttribute(
+      'data-hydro-click-payload',
+      JSON.stringify({
+        payload: { category: 'file_tree', data: { file_count: 3 } },
+      }),
+    );
+    document.querySelector('[data-file-tree]')?.append(metadata);
+  });
+  await expect(panel.getByText('PR changed since last review')).toHaveCount(0);
 });
 
 test('keeps a stable partial file tree usable without false warnings', async ({

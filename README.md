@@ -10,7 +10,7 @@ PR Review Focus Pins is a Chrome extension for keeping a private review queue in
 - Stores a reason (`revisit`, `question`, `test`, `risk`, or `custom`) and a note of up to 200 Unicode characters.
 - Shows all pins in a cross-origin extension panel with previous/next navigation, editing, removal, and stale-file status. Reasons and notes are never rendered into GitHub's DOM.
 - Filters only unpinned rows in the file tree. Diff contents and GitHub's Viewed state are never changed.
-- Detects a changed PR head or file set with a local SHA-256 fingerprint. It uses GitHub's file count when available so a virtualized partial tree does not create a false revision, and otherwise uses the stabilized rendered paths.
+- Detects a changed PR head with a local SHA-256 fingerprint. File-tree paths and GitHub's file count are used only for rendering stability and stale-pin status, so metadata appearing late cannot create a false revision.
 - Keeps each repository/pull-request scope separate and follows GitHub SPA navigation and delayed tree rendering.
 - Deletes one PR's data or all extension data on demand.
 

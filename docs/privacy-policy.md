@@ -11,7 +11,7 @@ The extension stores the following in `chrome.storage.local` in the current Chro
 - GitHub repository owner and repository name
 - Pull request number
 - Pinned file paths, reason, note, and local timestamps
-- PR revision fingerprints derived locally from the head commit identifier and file tree
+- PR revision fingerprints derived locally from the head commit identifier
 
 Storage is limited to 200 pins per pull request, 500 pins total, and 100 pull-request scopes.
 
@@ -19,7 +19,7 @@ Storage is limited to 200 pins per pull request, 500 pins total, and 100 pull-re
 
 The extension does not transmit, sell, share, or remotely collect this data. It has no backend, analytics SDK, crash-reporting SDK, advertising, remote configuration, GitHub API usage, or GitHub token access. It does not use remotely hosted code.
 
-The content script reads the rendered file tree and current head commit identifier on GitHub pull-request **Files changed** pages. It does not read diff contents, collect page contents in the background, or send page data anywhere. The identifier and file-tree metadata are hashed locally for change detection.
+The content script reads the rendered file tree and current head commit identifier on GitHub pull-request **Files changed** pages. It does not read diff contents, collect page contents in the background, or send page data anywhere. The identifier is hashed locally for change detection; file-tree metadata is used only for rendering stability, navigation, and stale-pin status.
 
 Saved reasons and notes are displayed in a `chrome-extension://` iframe rather than GitHub's document. GitHub page scripts cannot read that cross-origin panel. Communication with the host page is limited to file-tree paths, a local revision fingerprint, display state, and navigation commands; saved reasons and notes never cross that boundary.
 

@@ -15,14 +15,9 @@ export const createFileTreeSignature = (
 ): string => `revision\t${revisionIdentity}\n${serializeItems(items)}`;
 
 export const createRevisionFingerprint = async (
-  items: readonly FingerprintItem[],
   revisionIdentity: string,
-  expectedFileCount: number | null = null,
 ): Promise<string> => {
-  const input =
-    expectedFileCount === null
-      ? createFileTreeSignature(items, revisionIdentity)
-      : `revision\t${revisionIdentity}\nfile-count\t${expectedFileCount}\n`;
+  const input = `revision\t${revisionIdentity}\n`;
   const digest = await globalThis.crypto.subtle.digest(
     'SHA-256',
     new TextEncoder().encode(input),

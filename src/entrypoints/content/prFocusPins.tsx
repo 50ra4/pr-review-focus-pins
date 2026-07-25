@@ -148,11 +148,7 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
         setError('GitHub PR revision could not be identified.');
         return;
       }
-      const nextFingerprint = await createRevisionFingerprint(
-        extraction.items,
-        headCommit,
-        extraction.diagnostics.expectedFileCount,
-      );
+      const nextFingerprint = await createRevisionFingerprint(headCommit);
       if (!active || sequence !== scanSequence) return;
       setError('');
       const stable =
@@ -211,7 +207,13 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
       }
     });
     observer.observe(document.body, {
-      attributeFilter: ['data-head-oid', 'data-url'],
+      attributeFilter: [
+        'data-commit',
+        'data-head-oid',
+        'data-parent-commit',
+        'data-url',
+        'href',
+      ],
       attributes: true,
       childList: true,
       subtree: true,
