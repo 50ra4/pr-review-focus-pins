@@ -1,11 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import { createRoot, type Root as ReactRoot } from 'react-dom/client';
 import rowButtonStyles from './githubRowButtons.css?inline';
+import {
+  EMPTY_CONTENT_ERRORS,
+  getVisibleContentError,
+  reduceContentErrors,
+} from './contentErrors';
 import { createFileTreeStability } from './fileTreeStability';
 import {
   cleanupFileTree,
+  describeRevisionFailure,
   extractFileTreeItems,
-  extractPrHeadCommit,
+  extractPrRevision,
   hasFileTreeMutation,
   hasPrHeadMutation,
   injectPinButtons,
@@ -66,7 +79,10 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
   const [fingerprint, setFingerprint] = useState('');
   const [currentPathsComplete, setCurrentPathsComplete] = useState(false);
   const [pinOnly, setPinOnly] = useState(false);
-  const [error, setError] = useState('');
+  const [errors, dispatchError] = useReducer(
+    reduceContentErrors,
+    EMPTY_CONTENT_ERRORS,
+  );
   const [colorMode, setColorMode] = useState(
     document.documentElement.dataset.colorMode ?? 'auto',
   );
@@ -100,13 +116,13 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
       currentFingerprint: fingerprint,
       currentPaths: items.map((item) => item.path),
       currentPathsComplete,
-      error,
+      error: getVisibleContentError(errors),
       uiNotRecognized:
         diagnostics.treeFound &&
         diagnostics.candidateCount > 0 &&
         items.length === 0,
     }),
-    [colorMode, currentPathsComplete, diagnostics, error, fingerprint, items],
+    [colorMode, currentPathsComplete, diagnostics, errors, fingerprint, items],
   );
   snapshotRef.current = snapshot;
 
@@ -137,24 +153,30 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
         fingerprintRef.current = '';
         setFingerprint('');
         setCurrentPathsComplete(false);
+        dispatchError({ message: '', source: 'scan' });
         return;
       }
-      const headCommit = extractPrHeadCommit(document, scope);
-      if (!headCommit) {
+      const revision = extractPrRevision(document, scope);
+      panel.dataset.prFocusRevisionSource =
+        revision.diagnostics.selectedSource ?? 'unresolved';
+      if (!revision.commit) {
         stability.cancel();
         fingerprintRef.current = '';
         setFingerprint('');
         setCurrentPathsComplete(false);
-        setError('GitHub PR revision could not be identified.');
+        dispatchError({
+          message: describeRevisionFailure(revision.diagnostics),
+          source: 'scan',
+        });
         return;
       }
-      const nextFingerprint = await createRevisionFingerprint(headCommit);
+      const nextFingerprint = await createRevisionFingerprint(revision.commit);
       if (!active || sequence !== scanSequence) return;
-      setError('');
+      dispatchError({ message: '', source: 'scan' });
       const stable =
         extraction.diagnostics.complete ||
         stability.observe(
-          createFileTreeSignature(extraction.items, headCommit),
+          createFileTreeSignature(extraction.items, revision.commit),
           extraction.items.length,
         );
       if (!stable) {
@@ -175,10 +197,12 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
           currentFingerprint: nextFingerprint,
           currentPaths: extraction.items.map((item) => item.path),
         });
-        if (active) setError('');
       } catch (cause: unknown) {
         if (active)
-          setError(cause instanceof Error ? cause.message : String(cause));
+          dispatchError({
+            message: cause instanceof Error ? cause.message : String(cause),
+            source: 'sync',
+          });
       }
     };
 
@@ -218,7 +242,7 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
       observer.disconnect();
       cleanupFileTree(itemsRef.current);
     };
-  }, [scope]);
+  }, [panel, scope]);
 
   useEffect(() => {
     injectPinButtons(items, pinnedPaths);
@@ -269,9 +293,12 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
           : null;
         if (target) {
           target.scrollIntoView({ block: 'start', behavior: 'smooth' });
-          setError('');
+          dispatchError({ message: '', source: 'navigation' });
         } else {
-          setError(`${message.path} is not present in the current file tree.`);
+          dispatchError({
+            message: `${message.path} is not present in the current file tree.`,
+            source: 'navigation',
+          });
         }
       }
     };

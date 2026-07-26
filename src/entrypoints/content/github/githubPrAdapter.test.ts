@@ -3,8 +3,10 @@ import fixture50 from './fixtures/pr-files-50.html?raw';
 import nestedFixture from './fixtures/pr-files-nested.html?raw';
 import rerenderedFixture from './fixtures/pr-files-rerendered.html?raw';
 import {
+  describeRevisionFailure,
   extractFileTreeItems,
   extractPrHeadCommit,
+  extractPrRevision,
   hasFileTreeMutation,
   hasPrHeadMutation,
   injectPinButtons,
@@ -130,7 +132,7 @@ describe('GitHub PR adapter', () => {
     ).toBe('c'.repeat(40));
   });
 
-  it('rejects conflicting scoped revision metadata', () => {
+  it('prefers the scoped diff-range head when lower-priority metadata differs', () => {
     document.body.innerHTML = `
       <div data-url="/acme/widgets/pull/77/show_partial_comparison?end_commit_oid=${'a'.repeat(40)}"></div>
       <details-menu src="/acme/widgets/pull/77/show_toc?sha2=${'b'.repeat(40)}"></details-menu>
@@ -142,11 +144,61 @@ describe('GitHub PR adapter', () => {
         repository: 'widgets',
         pullNumber: 77,
       }),
-    ).toBeNull();
+    ).toBe('a'.repeat(40));
+  });
+
+  it('falls through ambiguous and unscoped head OIDs to scoped metadata', () => {
+    document.body.innerHTML = `
+      <form action="/acme/widgets/pull/77/files">
+        <span data-head-oid="${'a'.repeat(40)}"></span>
+        <span data-head-oid="${'b'.repeat(40)}"></span>
+      </form>
+      <span data-head-oid="${'d'.repeat(40)}"></span>
+      <div data-url="/acme/widgets/pull/77/show_partial_comparison?end_commit_oid=${'c'.repeat(40)}"></div>
+    `;
+
+    const result = extractPrRevision(document, {
+      owner: 'acme',
+      repository: 'widgets',
+      pullNumber: 77,
+    });
+
+    expect(result.commit).toBe('c'.repeat(40));
+    expect(result.diagnostics.selectedSource).toBe('end-commit-oid');
+    expect(result.diagnostics.sources[0]).toMatchObject({
+      candidateCount: 3,
+      outOfScopeCount: 1,
+      source: 'head-oid',
+      uniqueCommitCount: 2,
+      validCount: 2,
+    });
+  });
+
+  it('describes why every revision source was rejected without exposing SHAs', () => {
+    document.body.innerHTML = `
+      <span data-head-oid="${'a'.repeat(40)}"></span>
+      <div data-url="/acme/widgets/pull/77/show_partial_comparison?end_commit_oid=invalid"></div>
+    `;
+
+    const result = extractPrRevision(document, {
+      owner: 'acme',
+      repository: 'widgets',
+      pullNumber: 77,
+    });
+    const message = describeRevisionFailure(result.diagnostics);
+
+    expect(result.commit).toBeNull();
+    expect(message).toContain('head-oid: out-of-scope');
+    expect(message).toContain('end-commit-oid: invalid');
+    expect(message).toContain('toc-sha2: missing');
+    expect(message).not.toContain('a'.repeat(40));
   });
 
   it.each([
-    [`<div data-head-oid="${'a'.repeat(40)}"></div>`, 'a'.repeat(40)],
+    [
+      `<div data-head-oid="${'a'.repeat(40)}" data-url="/acme/widgets/pull/77/files"></div>`,
+      'a'.repeat(40),
+    ],
     [
       `<div data-url="/acme/widgets/pull/77/comparison?end_commit_oid=${'b'.repeat(40)}"></div>`,
       'b'.repeat(40),

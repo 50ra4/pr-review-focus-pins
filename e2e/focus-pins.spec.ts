@@ -24,6 +24,10 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
   const panel = extensionPage.frameLocator(panelSelector);
   const pinButtons = extensionPage.locator('[data-pr-focus-pin-path]');
   await expect(pinButtons).toHaveCount(3);
+  await expect(extensionPage.locator(panelSelector)).toHaveAttribute(
+    'data-pr-focus-revision-source',
+    'head-oid',
+  );
 
   await extensionPage
     .locator('[data-pr-focus-pin-path="src/security.ts"]')

@@ -139,72 +139,239 @@ export const hasPrHeadMutation = (
   });
 };
 
+export type RevisionSource = 'head-oid' | 'end-commit-oid' | 'toc-sha2';
+
+export type RevisionSourceDiagnostics = {
+  source: RevisionSource;
+  candidateCount: number;
+  validCount: number;
+  invalidCount: number;
+  outOfScopeCount: number;
+  uniqueCommitCount: number;
+};
+
+export type RevisionDiagnostics = {
+  selectedSource: RevisionSource | null;
+  sources: readonly RevisionSourceDiagnostics[];
+};
+
+export type PrRevisionExtraction = {
+  commit: string | null;
+  diagnostics: RevisionDiagnostics;
+};
+
+type RevisionSourceAnalysis = {
+  commits: Set<string>;
+  diagnostics: RevisionSourceDiagnostics;
+};
+
+type CommitCandidate =
+  { commit: string } | { rejection: 'invalid' | 'out-of-scope' };
+
+const isScopedPrUrl = (value: string, scope: PrScope): boolean => {
+  try {
+    const parsed = new URL(value, 'https://github.com');
+    const expectedPath =
+      `/${scope.owner}/${scope.repository}/pull/${scope.pullNumber}`.toLowerCase();
+    const pathname = parsed.pathname.toLowerCase();
+    return (
+      parsed.origin === 'https://github.com' &&
+      (pathname === expectedPath || pathname.startsWith(`${expectedPath}/`))
+    );
+  } catch {
+    return false;
+  }
+};
+
+const hasScopedRevisionContext = (
+  element: Element,
+  scope: PrScope,
+): boolean => {
+  const attributes = ['action', 'data-url', 'href', 'src'] as const;
+  let current: Element | null = element;
+  while (current) {
+    for (const attribute of attributes) {
+      const value = current.getAttribute(attribute);
+      if (value && isScopedPrUrl(value, scope)) return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
+};
+
 const readScopedQueryCommit = (
   value: string,
   parameter: string,
   scope: PrScope,
-): string | null => {
+): CommitCandidate => {
   try {
     const parsed = new URL(value, 'https://github.com');
-    const expectedPrefix =
-      `/${scope.owner}/${scope.repository}/pull/${scope.pullNumber}/`.toLowerCase();
-    if (
-      parsed.origin !== 'https://github.com' ||
-      !parsed.pathname.toLowerCase().startsWith(expectedPrefix)
-    ) {
-      return null;
+    if (!isScopedPrUrl(parsed.href, scope)) {
+      return { rejection: 'out-of-scope' };
     }
     const commit = parsed.searchParams.get(parameter);
-    return commit && COMMIT_SHA.test(commit) ? commit.toLowerCase() : null;
+    return commit && COMMIT_SHA.test(commit)
+      ? { commit: commit.toLowerCase() }
+      : { rejection: 'invalid' };
   } catch {
-    return null;
+    return { rejection: 'invalid' };
   }
 };
 
-const collectScopedQueryCommits = (
+const createAnalysis = (
+  source: RevisionSource,
+  candidateCount: number,
+  validCount: number,
+  invalidCount: number,
+  outOfScopeCount: number,
+  commits: Set<string>,
+): RevisionSourceAnalysis => ({
+  commits,
+  diagnostics: {
+    source,
+    candidateCount,
+    validCount,
+    invalidCount,
+    outOfScopeCount,
+    uniqueCommitCount: commits.size,
+  },
+});
+
+const analyzeHeadOids = (
+  root: ParentNode,
+  scope: PrScope,
+): RevisionSourceAnalysis => {
+  const elements = [...root.querySelectorAll<HTMLElement>('[data-head-oid]')];
+  const commits = new Set<string>();
+  let validCount = 0;
+  let invalidCount = 0;
+  let outOfScopeCount = 0;
+  for (const element of elements) {
+    const value = element.dataset.headOid;
+    if (!value || !COMMIT_SHA.test(value)) {
+      invalidCount += 1;
+    } else if (!hasScopedRevisionContext(element, scope)) {
+      outOfScopeCount += 1;
+    } else {
+      validCount += 1;
+      commits.add(value.toLowerCase());
+    }
+  }
+  return createAnalysis(
+    'head-oid',
+    elements.length,
+    validCount,
+    invalidCount,
+    outOfScopeCount,
+    commits,
+  );
+};
+
+const analyzeScopedQueryCommits = (
+  source: RevisionSource,
   elements: Iterable<Element>,
   attribute: string,
   parameter: string,
   scope: PrScope,
-): Set<string> => {
+): RevisionSourceAnalysis => {
+  let candidateCount = 0;
+  let validCount = 0;
+  let invalidCount = 0;
+  let outOfScopeCount = 0;
   const commits = new Set<string>();
   for (const element of elements) {
+    candidateCount += 1;
     const value = element.getAttribute(attribute);
-    if (!value) continue;
-    const commit = readScopedQueryCommit(value, parameter, scope);
-    if (commit) commits.add(commit);
+    if (!value) {
+      invalidCount += 1;
+      continue;
+    }
+    const candidate = readScopedQueryCommit(value, parameter, scope);
+    if ('commit' in candidate) {
+      validCount += 1;
+      commits.add(candidate.commit);
+    } else if (candidate.rejection === 'out-of-scope') {
+      outOfScopeCount += 1;
+    } else {
+      invalidCount += 1;
+    }
   }
-  return commits;
+  return createAnalysis(
+    source,
+    candidateCount,
+    validCount,
+    invalidCount,
+    outOfScopeCount,
+    commits,
+  );
+};
+
+const getRevisionSourceStatus = (
+  diagnostics: RevisionSourceDiagnostics,
+): string => {
+  if (diagnostics.candidateCount === 0) return 'missing';
+  if (diagnostics.validCount === 0) {
+    if (diagnostics.outOfScopeCount > 0 && diagnostics.invalidCount === 0) {
+      return 'out-of-scope';
+    }
+    if (diagnostics.invalidCount > 0 && diagnostics.outOfScopeCount === 0) {
+      return 'invalid';
+    }
+    return 'invalid/out-of-scope';
+  }
+  return diagnostics.uniqueCommitCount > 1 ? 'ambiguous' : 'unresolved';
+};
+
+export const describeRevisionFailure = (
+  diagnostics: RevisionDiagnostics,
+): string => {
+  const details = diagnostics.sources
+    .map(
+      (source) =>
+        `${source.source}: ${getRevisionSourceStatus(source)} ` +
+        `(${source.candidateCount} candidates, ${source.validCount} valid, ` +
+        `${source.uniqueCommitCount} unique)`,
+    )
+    .join('; ');
+  return `GitHub PR revision could not be identified (${details}).`;
+};
+
+export const extractPrRevision = (
+  root: ParentNode,
+  scope: PrScope,
+): PrRevisionExtraction => {
+  const analyses = [
+    analyzeHeadOids(root, scope),
+    analyzeScopedQueryCommits(
+      'end-commit-oid',
+      root.querySelectorAll('[data-url*="end_commit_oid="]'),
+      'data-url',
+      'end_commit_oid',
+      scope,
+    ),
+    analyzeScopedQueryCommits(
+      'toc-sha2',
+      root.querySelectorAll('details-menu[src*="sha2="]'),
+      'src',
+      'sha2',
+      scope,
+    ),
+  ];
+  const selected = analyses.find(({ commits }) => commits.size === 1);
+  return {
+    commit: selected ? [...selected.commits][0] : null,
+    diagnostics: {
+      selectedSource: selected?.diagnostics.source ?? null,
+      sources: analyses.map(({ diagnostics }) => diagnostics),
+    },
+  };
 };
 
 export const extractPrHeadCommit = (
   root: ParentNode,
   scope: PrScope,
 ): string | null => {
-  const headOids = new Set<string>();
-  for (const element of root.querySelectorAll<HTMLElement>('[data-head-oid]')) {
-    const value = element.dataset.headOid;
-    if (value && COMMIT_SHA.test(value)) headOids.add(value.toLowerCase());
-  }
-  if (headOids.size > 1) return null;
-  if (headOids.size === 1) return [...headOids][0];
-
-  const metadataCommits = collectScopedQueryCommits(
-    root.querySelectorAll('[data-url*="end_commit_oid="]'),
-    'data-url',
-    'end_commit_oid',
-    scope,
-  );
-  for (const commit of collectScopedQueryCommits(
-    root.querySelectorAll('details-menu[src*="sha2="]'),
-    'src',
-    'sha2',
-    scope,
-  )) {
-    metadataCommits.add(commit);
-  }
-
-  return metadataCommits.size === 1 ? [...metadataCommits][0] : null;
+  return extractPrRevision(root, scope).commit;
 };
 
 const readFileCount = (element: Element): number | null => {
