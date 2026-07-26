@@ -225,6 +225,17 @@ test('saves a pin when GitHub omits file_count metadata', async ({
   ).toHaveCount(1);
 
   await extensionPage.evaluate(() => {
+    document.querySelector('[data-file-tree-item="security"]')?.remove();
+    document.querySelector('#diff-security')?.remove();
+  });
+  await extensionPage.waitForTimeout(3_000);
+  await expect(panel.getByText('No analytics metadata')).toBeVisible();
+  await expect(panel.getByText('Stale', { exact: true })).toHaveCount(0);
+  await expect(
+    panel.getByRole('button', { exact: true, name: 'src/security.ts' }),
+  ).toBeEnabled();
+
+  await extensionPage.evaluate(() => {
     const metadata = document.createElement('span');
     metadata.setAttribute(
       'data-hydro-click-payload',

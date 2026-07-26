@@ -17,7 +17,7 @@ const ROW_SELECTOR =
 const REVISION_SELECTORS = [
   '[data-head-oid]',
   '[data-url*="end_commit_oid="]',
-  'a[data-commit][href*="/pull/"]',
+  'details-menu[src*="sha2="]',
 ] as const;
 
 export const PIN_BUTTON_ATTRIBUTE = 'data-pr-focus-pin-path';
@@ -72,20 +72,41 @@ const containsFileTree = (node: Node): boolean => {
   );
 };
 
-const findRevisionRoots = (root: ParentNode): Element[] => {
-  const roots: Element[] = [];
-  for (const selector of REVISION_SELECTORS) {
-    roots.push(...root.querySelectorAll(selector));
-  }
-  return roots;
-};
-
 const containsRevisionRoot = (node: Node): boolean => {
   if (!(node instanceof Element)) return false;
   return REVISION_SELECTORS.some(
     (selector) =>
       node.matches(selector) || node.querySelector(selector) !== null,
   );
+};
+
+const isRevisionAttributeMutation = (mutation: MutationRecord): boolean => {
+  if (mutation.type !== 'attributes' || !(mutation.target instanceof Element)) {
+    return false;
+  }
+  const current = mutation.attributeName
+    ? mutation.target.getAttribute(mutation.attributeName)
+    : null;
+  switch (mutation.attributeName) {
+    case 'data-head-oid':
+      return (
+        (current !== null && COMMIT_SHA.test(current)) ||
+        (mutation.oldValue !== null && COMMIT_SHA.test(mutation.oldValue))
+      );
+    case 'data-url':
+      return (
+        current?.includes('end_commit_oid=') === true ||
+        mutation.oldValue?.includes('end_commit_oid=') === true
+      );
+    case 'src':
+      return (
+        mutation.target.localName === 'details-menu' &&
+        (current?.includes('sha2=') === true ||
+          mutation.oldValue?.includes('sha2=') === true)
+      );
+    default:
+      return false;
+  }
 };
 
 export const hasFileTreeMutation = (
@@ -106,95 +127,84 @@ export const hasFileTreeMutation = (
 
 export const hasPrHeadMutation = (
   mutations: readonly MutationRecord[],
-  root: ParentNode,
 ): boolean => {
-  const revisionRoots = findRevisionRoots(root);
   return mutations.some((mutation) => {
-    if (
-      revisionRoots.some(
-        (revisionRoot) =>
-          mutation.target === revisionRoot ||
-          revisionRoot.contains(mutation.target),
-      )
-    ) {
-      return true;
+    if (mutation.type === 'attributes') {
+      return isRevisionAttributeMutation(mutation);
     }
+    if (mutation.type !== 'childList') return false;
     return [...mutation.addedNodes, ...mutation.removedNodes].some(
       containsRevisionRoot,
     );
   });
 };
 
-const readScopedCommit = (
-  anchor: HTMLAnchorElement,
+const readScopedQueryCommit = (
+  value: string,
+  parameter: string,
   scope: PrScope,
 ): string | null => {
-  const dataCommit = anchor.dataset.commit;
-  if (!dataCommit || !COMMIT_SHA.test(dataCommit)) return null;
   try {
-    const parsed = new URL(anchor.href, 'https://github.com');
-    const segments = parsed.pathname.split('/').filter(Boolean);
+    const parsed = new URL(value, 'https://github.com');
+    const expectedPrefix =
+      `/${scope.owner}/${scope.repository}/pull/${scope.pullNumber}/`.toLowerCase();
     if (
-      segments.length !== 6 ||
-      segments[0].toLowerCase() !== scope.owner.toLowerCase() ||
-      segments[1].toLowerCase() !== scope.repository.toLowerCase() ||
-      segments[2] !== 'pull' ||
-      segments[3] !== String(scope.pullNumber) ||
-      segments[4] !== 'commits' ||
-      segments[5].toLowerCase() !== dataCommit.toLowerCase()
+      parsed.origin !== 'https://github.com' ||
+      !parsed.pathname.toLowerCase().startsWith(expectedPrefix)
     ) {
       return null;
     }
-    return dataCommit.toLowerCase();
+    const commit = parsed.searchParams.get(parameter);
+    return commit && COMMIT_SHA.test(commit) ? commit.toLowerCase() : null;
   } catch {
     return null;
   }
 };
 
-const extractCommitGraphHead = (
-  root: ParentNode,
+const collectScopedQueryCommits = (
+  elements: Iterable<Element>,
+  attribute: string,
+  parameter: string,
   scope: PrScope,
-): string | null => {
+): Set<string> => {
   const commits = new Set<string>();
-  const parents = new Set<string>();
-  for (const anchor of root.querySelectorAll<HTMLAnchorElement>(
-    'a[data-commit]',
-  )) {
-    const commit = readScopedCommit(anchor, scope);
-    if (!commit) continue;
-    commits.add(commit);
-    const parent = anchor.dataset.parentCommit;
-    if (parent && COMMIT_SHA.test(parent)) parents.add(parent.toLowerCase());
+  for (const element of elements) {
+    const value = element.getAttribute(attribute);
+    if (!value) continue;
+    const commit = readScopedQueryCommit(value, parameter, scope);
+    if (commit) commits.add(commit);
   }
-  const heads = [...commits].filter((commit) => !parents.has(commit));
-  return heads.length === 1 ? heads[0] : null;
+  return commits;
 };
 
 export const extractPrHeadCommit = (
   root: ParentNode,
   scope: PrScope,
 ): string | null => {
+  const headOids = new Set<string>();
   for (const element of root.querySelectorAll<HTMLElement>('[data-head-oid]')) {
     const value = element.dataset.headOid;
-    if (value && COMMIT_SHA.test(value)) return value.toLowerCase();
+    if (value && COMMIT_SHA.test(value)) headOids.add(value.toLowerCase());
   }
+  if (headOids.size > 1) return null;
+  if (headOids.size === 1) return [...headOids][0];
 
-  for (const element of root.querySelectorAll<HTMLElement>(
-    '[data-url*="end_commit_oid="]',
+  const metadataCommits = collectScopedQueryCommits(
+    root.querySelectorAll('[data-url*="end_commit_oid="]'),
+    'data-url',
+    'end_commit_oid',
+    scope,
+  );
+  for (const commit of collectScopedQueryCommits(
+    root.querySelectorAll('details-menu[src*="sha2="]'),
+    'src',
+    'sha2',
+    scope,
   )) {
-    const value = element.dataset.url;
-    if (!value) continue;
-    try {
-      const sha = new URL(value, 'https://github.com').searchParams.get(
-        'end_commit_oid',
-      );
-      if (sha && COMMIT_SHA.test(sha)) return sha.toLowerCase();
-    } catch {
-      continue;
-    }
+    metadataCommits.add(commit);
   }
 
-  return extractCommitGraphHead(root, scope);
+  return metadataCommits.size === 1 ? [...metadataCommits][0] : null;
 };
 
 const readFileCount = (element: Element): number | null => {

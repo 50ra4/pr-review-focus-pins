@@ -109,13 +109,16 @@ describe('GitHub PR adapter', () => {
     expect(result.diagnostics.complete).toBe(false);
   });
 
-  it('extracts a unique scoped commit-graph head independently of DOM order', () => {
+  it('extracts the scoped diff-range head for a multi-commit merge topology', () => {
     document.body.innerHTML = `
       <div class="js-diffbar-range-list">
-        <a data-commit="${'b'.repeat(40)}" data-parent-commit="${'a'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'b'.repeat(40)}">head first in DOM</a>
-        <a data-commit="${'c'.repeat(40)}" href="/other/widgets/pull/77/commits/${'c'.repeat(40)}">other PR</a>
-        <a data-commit="${'a'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'a'.repeat(40)}">parent later in DOM</a>
+        <a data-commit="${'a'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'a'.repeat(40)}">first branch</a>
+        <a data-commit="${'b'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'b'.repeat(40)}">second branch</a>
+        <a data-commit="${'c'.repeat(40)}" data-parent-commit="${'a'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'c'.repeat(40)}">merge commit</a>
       </div>
+      <details-menu
+        src="/acme/widgets/pull/77/show_toc?base_sha=${'0'.repeat(40)}&sha1=${'0'.repeat(40)}&sha2=${'c'.repeat(40)}"
+      ></details-menu>
     `;
 
     expect(
@@ -124,13 +127,13 @@ describe('GitHub PR adapter', () => {
         repository: 'widgets',
         pullNumber: 77,
       }),
-    ).toBe('b'.repeat(40));
+    ).toBe('c'.repeat(40));
   });
 
-  it('rejects an ambiguous commit graph with multiple tips', () => {
+  it('rejects conflicting scoped revision metadata', () => {
     document.body.innerHTML = `
-      <a data-commit="${'a'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'a'.repeat(40)}">one</a>
-      <a data-commit="${'b'.repeat(40)}" href="/acme/widgets/pull/77/commits/${'b'.repeat(40)}">two</a>
+      <div data-url="/acme/widgets/pull/77/show_partial_comparison?end_commit_oid=${'a'.repeat(40)}"></div>
+      <details-menu src="/acme/widgets/pull/77/show_toc?sha2=${'b'.repeat(40)}"></details-menu>
     `;
 
     expect(
@@ -145,8 +148,12 @@ describe('GitHub PR adapter', () => {
   it.each([
     [`<div data-head-oid="${'a'.repeat(40)}"></div>`, 'a'.repeat(40)],
     [
-      `<div data-url="/comparison?end_commit_oid=${'b'.repeat(40)}"></div>`,
+      `<div data-url="/acme/widgets/pull/77/comparison?end_commit_oid=${'b'.repeat(40)}"></div>`,
       'b'.repeat(40),
+    ],
+    [
+      `<details-menu src="/acme/widgets/pull/77/show_toc?sha2=${'c'.repeat(40)}"></details-menu>`,
+      'c'.repeat(40),
     ],
   ])(
     'extracts the PR head from fallback revision metadata',
@@ -175,7 +182,8 @@ describe('GitHub PR adapter', () => {
           resolve(records);
         });
         observer.observe(document.body, {
-          attributeFilter: ['data-head-oid'],
+          attributeFilter: ['data-head-oid', 'data-url', 'src'],
+          attributeOldValue: true,
           attributes: true,
           childList: true,
           subtree: true,
@@ -186,14 +194,38 @@ describe('GitHub PR adapter', () => {
     const unrelated = await collectMutation(() => {
       document.querySelector('main')?.append(document.createElement('span'));
     });
-    expect(hasPrHeadMutation(unrelated, document)).toBe(false);
+    expect(hasPrHeadMutation(unrelated)).toBe(false);
+
+    const revisionChild = await collectMutation(() => {
+      document
+        .querySelector('[data-head-oid]')
+        ?.append(document.createElement('span'));
+    });
+    expect(hasPrHeadMutation(revisionChild)).toBe(false);
 
     const revision = await collectMutation(() => {
       document
         .querySelector('[data-head-oid]')
         ?.setAttribute('data-head-oid', 'b'.repeat(40));
     });
-    expect(hasPrHeadMutation(revision, document)).toBe(true);
+    expect(hasPrHeadMutation(revision)).toBe(true);
+
+    const removedRevision = await collectMutation(() => {
+      document
+        .querySelector('[data-head-oid]')
+        ?.removeAttribute('data-head-oid');
+    });
+    expect(hasPrHeadMutation(removedRevision)).toBe(true);
+
+    const addedRevision = await collectMutation(() => {
+      const metadata = document.createElement('details-menu');
+      metadata.setAttribute(
+        'src',
+        `/acme/widgets/pull/77/show_toc?sha2=${'c'.repeat(40)}`,
+      );
+      document.querySelector('main')?.append(metadata);
+    });
+    expect(hasPrHeadMutation(addedRevision)).toBe(true);
   });
 
   it('injects one button per row idempotently and reinjects after rerender', () => {

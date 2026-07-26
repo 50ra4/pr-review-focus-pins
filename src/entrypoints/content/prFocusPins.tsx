@@ -168,10 +168,7 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
       if (extraction.diagnostics.complete) stability.cancel();
       fingerprintRef.current = nextFingerprint;
       setFingerprint(nextFingerprint);
-      setCurrentPathsComplete(
-        extraction.diagnostics.complete ||
-          extraction.diagnostics.expectedFileCount === null,
-      );
+      setCurrentPathsComplete(extraction.diagnostics.complete);
       try {
         await sendMessage('syncPinScope', {
           scope,
@@ -201,19 +198,14 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
     const observer = new MutationObserver((mutations) => {
       if (
         hasFileTreeMutation(mutations, document) ||
-        hasPrHeadMutation(mutations, document)
+        hasPrHeadMutation(mutations)
       ) {
         scheduleScan();
       }
     });
     observer.observe(document.body, {
-      attributeFilter: [
-        'data-commit',
-        'data-head-oid',
-        'data-parent-commit',
-        'data-url',
-        'href',
-      ],
+      attributeFilter: ['data-head-oid', 'data-url', 'src'],
+      attributeOldValue: true,
       attributes: true,
       childList: true,
       subtree: true,
