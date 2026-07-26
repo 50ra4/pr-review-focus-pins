@@ -23,3 +23,5 @@ MV3 facts specific to this repo:
 - A content script's `matches` and `js` entries both live in `manifest.config.ts`
   under `content_scripts[]` (e.g. `{ matches: [...], js: ['src/entrypoints/content/sample.tsx'] }`).
 - Chrome APIs are typed via `@types/chrome`.
+- Keep DOM-scan errors separate from messaging and operation errors. A successful
+  scan must never clear an error raised by storage or runtime messaging.
