@@ -25,3 +25,5 @@ MV3 facts specific to this repo:
 - Chrome APIs are typed via `@types/chrome`.
 - Keep DOM-scan errors separate from messaging and operation errors. A successful
   scan must never clear an error raised by storage or runtime messaging.
+- A successful messaging operation must clear its own prior error without clearing
+  errors owned by other sources.

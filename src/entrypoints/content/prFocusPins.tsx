@@ -12,6 +12,7 @@ import {
   EMPTY_CONTENT_ERRORS,
   getVisibleContentError,
   reduceContentErrors,
+  runContentSync,
 } from './contentErrors';
 import { createFileTreeStability } from './fileTreeStability';
 import {
@@ -191,19 +192,14 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
       fingerprintRef.current = nextFingerprint;
       setFingerprint(nextFingerprint);
       setCurrentPathsComplete(extraction.diagnostics.complete);
-      try {
-        await sendMessage('syncPinScope', {
+      const syncError = await runContentSync(() =>
+        sendMessage('syncPinScope', {
           scope,
           currentFingerprint: nextFingerprint,
           currentPaths: extraction.items.map((item) => item.path),
-        });
-      } catch (cause: unknown) {
-        if (active)
-          dispatchError({
-            message: cause instanceof Error ? cause.message : String(cause),
-            source: 'sync',
-          });
-      }
+        }),
+      );
+      if (active) dispatchError(syncError);
     };
 
     const scheduleScan = (): void => {
