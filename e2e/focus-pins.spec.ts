@@ -26,7 +26,7 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
   await expect(pinButtons).toHaveCount(3);
   await expect(extensionPage.locator(panelSelector)).toHaveAttribute(
     'data-pr-focus-revision-source',
-    'head-oid',
+    'end-commit-oid',
   );
 
   await extensionPage
@@ -69,10 +69,16 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
 
   await extensionPage.evaluate(() => {
     document
-      .querySelector('[data-head-oid]')
+      .querySelector('[data-url*="end_commit_oid="]')
       ?.setAttribute(
-        'data-head-oid',
-        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        'data-url',
+        '/acme/widgets/pull/77/show_partial_comparison?end_commit_oid=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      );
+    document
+      .querySelector('details-menu[src*="sha2="]')
+      ?.setAttribute(
+        'src',
+        '/acme/widgets/pull/77/show_toc?sha2=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
       );
     const diff = document.querySelector('#diff-security');
     if (diff) diff.textContent = 'updated src/security.ts diff';
@@ -92,10 +98,16 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
 
   await extensionPage.evaluate(() => {
     document
-      .querySelector('[data-head-oid]')
+      .querySelector('[data-url*="end_commit_oid="]')
       ?.setAttribute(
-        'data-head-oid',
-        'cccccccccccccccccccccccccccccccccccccccc',
+        'data-url',
+        '/acme/widgets/pull/77/show_partial_comparison?end_commit_oid=cccccccccccccccccccccccccccccccccccccccc',
+      );
+    document
+      .querySelector('details-menu[src*="sha2="]')
+      ?.setAttribute(
+        'src',
+        '/acme/widgets/pull/77/show_toc?sha2=cccccccccccccccccccccccccccccccccccccccc',
       );
     const tree = document.querySelector('[data-file-tree]');
     const row = document.createElement('li');
@@ -117,10 +129,16 @@ test('pins, filters, restores, detects changes, and marks stale paths', async ({
 
   await extensionPage.evaluate(() => {
     document
-      .querySelector('[data-head-oid]')
+      .querySelector('[data-url*="end_commit_oid="]')
       ?.setAttribute(
-        'data-head-oid',
-        'dddddddddddddddddddddddddddddddddddddddd',
+        'data-url',
+        '/acme/widgets/pull/77/show_partial_comparison?end_commit_oid=dddddddddddddddddddddddddddddddddddddddd',
+      );
+    document
+      .querySelector('details-menu[src*="sha2="]')
+      ?.setAttribute(
+        'src',
+        '/acme/widgets/pull/77/show_toc?sha2=dddddddddddddddddddddddddddddddddddddddd',
       );
     document.querySelector('[data-file-tree-item="security"]')?.remove();
     document.querySelector('#diff-security')?.remove();
@@ -165,6 +183,10 @@ test('waits for staged file-tree rendering before recording the revision', async
     2,
     { timeout: 2_500 },
   );
+  await expect(extensionPage.locator(panelSelector)).toHaveAttribute(
+    'data-pr-focus-revision-source',
+    'end-commit-oid',
+  );
   await extensionPage.waitForTimeout(500);
   await expect(panel.getByText('PR changed since last review')).toHaveCount(0);
   await extensionPage.locator('[data-pr-focus-pin-path="README.md"]').click();
@@ -177,10 +199,16 @@ test('waits for staged file-tree rendering before recording the revision', async
 
   await extensionPage.evaluate(() => {
     document
-      .querySelector('[data-head-oid]')
+      .querySelector('[data-url*="end_commit_oid="]')
       ?.setAttribute(
-        'data-head-oid',
-        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        'data-url',
+        '/acme/widgets/pull/78/show_partial_comparison?end_commit_oid=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      );
+    document
+      .querySelector('details-menu[src*="sha2="]')
+      ?.setAttribute(
+        'src',
+        '/acme/widgets/pull/78/show_toc?sha2=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
       );
     const tree = document.querySelector('[data-file-tree]');
     const row = document.createElement('li');

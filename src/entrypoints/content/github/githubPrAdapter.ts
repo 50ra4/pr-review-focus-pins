@@ -319,7 +319,7 @@ const getRevisionSourceStatus = (
     }
     return 'invalid/out-of-scope';
   }
-  return diagnostics.uniqueCommitCount > 1 ? 'ambiguous' : 'unresolved';
+  return 'ambiguous';
 };
 
 export const describeRevisionFailure = (
