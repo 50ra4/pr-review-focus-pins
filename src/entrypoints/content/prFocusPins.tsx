@@ -11,6 +11,7 @@ import rowButtonStyles from './githubRowButtons.css?inline';
 import {
   EMPTY_CONTENT_ERRORS,
   getVisibleContentError,
+  isCurrentScanResult,
   reduceContentErrors,
   runContentSync,
 } from './contentErrors';
@@ -192,14 +193,16 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
       fingerprintRef.current = nextFingerprint;
       setFingerprint(nextFingerprint);
       setCurrentPathsComplete(extraction.diagnostics.complete);
-      const syncError = await runContentSync(() =>
+      const syncAction = await runContentSync(() =>
         sendMessage('syncPinScope', {
           scope,
           currentFingerprint: nextFingerprint,
           currentPaths: extraction.items.map((item) => item.path),
         }),
       );
-      if (active) dispatchError(syncError);
+      if (isCurrentScanResult(active, sequence, scanSequence)) {
+        dispatchError(syncAction);
+      }
     };
 
     const scheduleScan = (): void => {

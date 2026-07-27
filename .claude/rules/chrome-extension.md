@@ -27,3 +27,5 @@ MV3 facts specific to this repo:
   scan must never clear an error raised by storage or runtime messaging.
 - A successful messaging operation must clear its own prior error without clearing
   errors owned by other sources.
+- After any awaited scan operation, apply its result only when the content script
+  is still active and the scan sequence is still current.
