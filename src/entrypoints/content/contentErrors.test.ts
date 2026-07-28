@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   EMPTY_CONTENT_ERRORS,
   getVisibleContentError,
-  isCurrentScanResult,
   reduceContentErrors,
   runContentSync,
 } from './contentErrors';
@@ -53,12 +52,6 @@ describe('content error state', () => {
       message: 'Storage mutation failed.',
       source: 'sync',
     });
-  });
-
-  it('rejects messaging outcomes from inactive or superseded scans', () => {
-    expect(isCurrentScanResult(true, 2, 2)).toBe(true);
-    expect(isCurrentScanResult(true, 1, 2)).toBe(false);
-    expect(isCurrentScanResult(false, 2, 2)).toBe(false);
   });
 
   it('keeps scan diagnostics visible alongside persistent operation errors', () => {

@@ -11,11 +11,11 @@ import rowButtonStyles from './githubRowButtons.css?inline';
 import {
   EMPTY_CONTENT_ERRORS,
   getVisibleContentError,
-  isCurrentScanResult,
   reduceContentErrors,
   runContentSync,
 } from './contentErrors';
 import { createFileTreeStability } from './fileTreeStability';
+import { isCurrentScanResult } from './scanLifecycle';
 import {
   cleanupFileTree,
   describeRevisionFailure,
@@ -173,7 +173,7 @@ const Root = ({ panel, panelOrigin, scope }: RootProps) => {
         return;
       }
       const nextFingerprint = await createRevisionFingerprint(revision.commit);
-      if (!active || sequence !== scanSequence) return;
+      if (!isCurrentScanResult(active, sequence, scanSequence)) return;
       dispatchError({ message: '', source: 'scan' });
       const stable =
         extraction.diagnostics.complete ||

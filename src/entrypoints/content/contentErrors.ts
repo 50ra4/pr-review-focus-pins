@@ -35,11 +35,5 @@ export const runContentSync = async (
   }
 };
 
-export const isCurrentScanResult = (
-  active: boolean,
-  sequence: number,
-  currentSequence: number,
-): boolean => active && sequence === currentSequence;
-
 export const getVisibleContentError = (errors: ContentErrors): string =>
   [errors.sync, errors.navigation, errors.scan].filter(Boolean).join(' ');
