@@ -29,3 +29,5 @@ MV3 facts specific to this repo:
   errors owned by other sources.
 - After any awaited scan operation, apply its result only when the content script
   is still active and the scan sequence is still current.
+- When the content script exposes diagnostics or metadata in the host DOM, keep the
+  privacy policy's host-page communication inventory accurate.

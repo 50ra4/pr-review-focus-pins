@@ -21,7 +21,7 @@ The extension does not transmit, sell, share, or remotely collect this data. It 
 
 The content script reads the rendered file tree and current head commit identifier on GitHub pull-request **Files changed** pages. It does not read diff contents, collect page contents in the background, or send page data anywhere. The identifier is hashed locally for change detection; file-tree metadata is used only for rendering stability, navigation, and stale-pin status.
 
-Saved reasons and notes are displayed in a `chrome-extension://` iframe rather than GitHub's document. GitHub page scripts cannot read that cross-origin panel. Communication with the host page is limited to file-tree paths, a local revision fingerprint, display state, and navigation commands; saved reasons and notes never cross that boundary.
+Saved reasons and notes are displayed in a `chrome-extension://` iframe rather than GitHub's document. GitHub page scripts cannot read that cross-origin panel. Communication with the host page is limited to file-tree paths, a local revision fingerprint, display state, navigation commands, and a non-sensitive revision-source diagnostic label exposed as `data-pr-focus-revision-source`; the label contains no commit identifier or user-created content, and saved reasons and notes never cross that boundary.
 
 ## Deletion and retention
 
