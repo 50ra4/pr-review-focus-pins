@@ -1,9 +1,9 @@
 # crx-vite-ts-react-template
 
 Chrome extension (Manifest V3) template built with Vite + TypeScript + React.
-Surfaces: popup, options page, background service worker, content script — each
-lives under `src/entrypoints/<surface>/`. Root-level HTML files (popup/options)
-load `src/entrypoints/<surface>/<surface>.tsx`; the manifest is generated from
+Surfaces: extension panel, background service worker, content script — each
+lives under `src/entrypoints/<surface>/`. Root-level `panel.html` loads
+`src/entrypoints/panel/panel.tsx`; the manifest is generated from
 `manifest.config.ts` via `@crxjs/vite-plugin`; `npm run build` outputs to
 `extension/` (gitignored). `src/lib/` holds shared modules entrypoints may
 import (never the reverse); `src/examples/` holds deletable sample code. See

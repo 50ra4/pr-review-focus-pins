@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { crx } from '@crxjs/vite-plugin';
+import { fileURLToPath } from 'node:url';
 
 import manifest from './manifest.config';
 
@@ -8,6 +9,11 @@ import manifest from './manifest.config';
 export default defineConfig(({ command }) => ({
   build: {
     outDir: command === 'build' ? 'extension' : 'dist',
+    rollupOptions: {
+      input: {
+        panel: fileURLToPath(new URL('./panel.html', import.meta.url)),
+      },
+    },
   },
   plugins: [react(), crx({ manifest })],
 }));

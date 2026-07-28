@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Staged Fixture PR Files</title>
+  </head>
+  <body>
+    <h1>Files changed</h1>
+    <div
+      class="js-diffbar-range-list"
+      data-url="/acme/widgets/pull/78/show_partial_comparison?end_commit_oid=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    >
+      <a
+        data-commit="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        href="/acme/widgets/pull/78/commits/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        >Initial commit</a
+      >
+    </div>
+    <details-menu
+      src="/acme/widgets/pull/78/show_toc?sha2=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ></details-menu>
+    <aside aria-label="File tree">
+      <ul
+        data-file-tree
+        data-hydro-click-payload='{"payload":{"category":"file_tree","data":{"file_count":2}}}'
+      >
+        <li data-file-tree-item="readme">
+          <a title="README.md" href="/acme/widgets/pull/78/files#diff-readme"
+            >README.md</a
+          >
+        </li>
+      </ul>
+    </aside>
+    <main>
+      <div id="diff-readme">README.md diff</div>
+      <div id="render-noise"></div>
+    </main>
+    <script>
+      window.setTimeout(() => {
+        const tree = document.querySelector('[data-file-tree]');
+        const row = document.createElement('li');
+        row.dataset.fileTreeItem = 'security';
+        row.innerHTML =
+          '<a title="src/security.ts" href="/acme/widgets/pull/78/files#diff-security">security.ts</a>';
+        tree?.append(row);
+
+        const diff = document.createElement('div');
+        diff.id = 'diff-security';
+        diff.textContent = 'src/security.ts diff';
+        document.querySelector('main')?.append(diff);
+      }, 1_500);
+
+      const noise = document.querySelector('#render-noise');
+      const noiseTimer = window.setInterval(() => {
+        noise?.append(document.createElement('span'));
+      }, 25);
+      window.setTimeout(() => window.clearInterval(noiseTimer), 4_000);
+    </script>
+  </body>
+</html>

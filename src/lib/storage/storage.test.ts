@@ -20,31 +20,50 @@ afterEach(() => {
 
 describe('typed storage', () => {
   it('returns the schema default value when storage has no value', async () => {
-    await expect(getStorageValue('exampleSetting')).resolves.toBe('未設定');
+    await expect(getStorageValue('pinStore')).resolves.toEqual({
+      version: 1,
+      scopes: {},
+    });
   });
 
   it('sets and gets a typed value', async () => {
-    await setStorageValue('exampleSetting', '保存済み');
+    const store = { version: 1 as const, scopes: {} };
+    await setStorageValue('pinStore', store);
 
-    await expect(getStorageValue('exampleSetting')).resolves.toBe('保存済み');
+    await expect(getStorageValue('pinStore')).resolves.toEqual(store);
   });
 
   it('removes a value and falls back to the schema default value', async () => {
-    await setStorageValue('exampleSetting', '削除予定');
-    await removeStorageValue('exampleSetting');
+    await setStorageValue('pinStore', { version: 1, scopes: {} });
+    await removeStorageValue('pinStore');
 
-    await expect(getStorageValue('exampleSetting')).resolves.toBe('未設定');
+    await expect(getStorageValue('pinStore')).resolves.toEqual({
+      version: 1,
+      scopes: {},
+    });
   });
 
   it('subscribes to typed storage changes for a key', async () => {
     const listener = vi.fn();
-    const unsubscribe = onStorageValueChanged('exampleSetting', listener);
+    const unsubscribe = onStorageValueChanged('pinStore', listener);
 
-    await setStorageValue('exampleSetting', '変更前');
+    const previous = { version: 1 as const, scopes: {} };
+    await setStorageValue('pinStore', previous);
     listener.mockClear();
-    await setStorageValue('exampleSetting', '変更後');
+    const next = {
+      version: 1 as const,
+      scopes: {
+        'openai/codex#42': {
+          scope: { owner: 'OpenAI', repository: 'Codex', pullNumber: 42 },
+          observedFingerprint: 'fingerprint',
+          lastSeenAt: '2026-07-20T00:00:00.000Z',
+          pins: {},
+        },
+      },
+    };
+    await setStorageValue('pinStore', next);
 
-    expect(listener).toHaveBeenCalledWith('変更後', '変更前');
+    expect(listener).toHaveBeenCalledWith(next, previous);
 
     unsubscribe();
     expect(
